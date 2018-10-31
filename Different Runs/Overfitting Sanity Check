@@ -1,0 +1,602 @@
+('Epoch', 0, ' ,    Loss Per Epoch: ', 2.7895088911477726)
+training accuracy: 0.20
+('Epoch', 1, ' ,    Loss Per Epoch: ', 2.537289063469967)
+training accuracy: 0.23
+('Epoch', 2, ' ,    Loss Per Epoch: ', 2.4430932331237623)
+training accuracy: 0.26
+('Epoch', 3, ' ,    Loss Per Epoch: ', 2.3795736986713556)
+training accuracy: 0.28
+('Epoch', 4, ' ,    Loss Per Epoch: ', 2.330314167661402)
+training accuracy: 0.27
+('Epoch', 5, ' ,    Loss Per Epoch: ', 2.289508338152773)
+training accuracy: 0.29
+('Epoch', 6, ' ,    Loss Per Epoch: ', 2.2541797374608987)
+training accuracy: 0.30
+('Epoch', 7, ' ,    Loss Per Epoch: ', 2.2226928208673953)
+training accuracy: 0.34
+('Epoch', 8, ' ,    Loss Per Epoch: ', 2.1940729690300076)
+training accuracy: 0.36
+('Epoch', 9, ' ,    Loss Per Epoch: ', 2.1677606051574014)
+training accuracy: 0.37
+('Epoch', 10, ' ,    Loss Per Epoch: ', 2.1431999035789557)
+training accuracy: 0.38
+('Epoch', 11, ' ,    Loss Per Epoch: ', 2.1201830838693065)
+training accuracy: 0.38
+('Epoch', 12, ' ,    Loss Per Epoch: ', 2.0983838399479766)
+training accuracy: 0.39
+('Epoch', 13, ' ,    Loss Per Epoch: ', 2.077640882860488)
+training accuracy: 0.39
+('Epoch', 14, ' ,    Loss Per Epoch: ', 2.0578799950055)
+training accuracy: 0.40
+('Epoch', 15, ' ,    Loss Per Epoch: ', 2.0389382113934666)
+training accuracy: 0.40
+('Epoch', 16, ' ,    Loss Per Epoch: ', 2.020685082619781)
+training accuracy: 0.42
+('Epoch', 17, ' ,    Loss Per Epoch: ', 2.003056552500245)
+training accuracy: 0.42
+('Epoch', 18, ' ,    Loss Per Epoch: ', 1.985977352139181)
+training accuracy: 0.43
+('Epoch', 19, ' ,    Loss Per Epoch: ', 1.9693668727746485)
+training accuracy: 0.44
+('Epoch', 20, ' ,    Loss Per Epoch: ', 1.9531927762749466)
+training accuracy: 0.44
+('Epoch', 21, ' ,    Loss Per Epoch: ', 1.937430244016286)
+training accuracy: 0.45
+('Epoch', 22, ' ,    Loss Per Epoch: ', 1.9220483305995164)
+training accuracy: 0.45
+('Epoch', 23, ' ,    Loss Per Epoch: ', 1.9070021483323927)
+training accuracy: 0.45
+('Epoch', 24, ' ,    Loss Per Epoch: ', 1.8922535308488126)
+training accuracy: 0.45
+('Epoch', 25, ' ,    Loss Per Epoch: ', 1.8777546283813376)
+training accuracy: 0.45
+('Epoch', 26, ' ,    Loss Per Epoch: ', 1.863501069521942)
+training accuracy: 0.46
+('Epoch', 27, ' ,    Loss Per Epoch: ', 1.84947666452022)
+training accuracy: 0.46
+('Epoch', 28, ' ,    Loss Per Epoch: ', 1.8356982483515123)
+training accuracy: 0.47
+('Epoch', 29, ' ,    Loss Per Epoch: ', 1.822133230652322)
+training accuracy: 0.47
+('Epoch', 30, ' ,    Loss Per Epoch: ', 1.808763839371095)
+training accuracy: 0.47
+('Epoch', 31, ' ,    Loss Per Epoch: ', 1.7955527206501483)
+training accuracy: 0.47
+('Epoch', 32, ' ,    Loss Per Epoch: ', 1.782508474876009)
+training accuracy: 0.47
+('Epoch', 33, ' ,    Loss Per Epoch: ', 1.769574724842725)
+training accuracy: 0.48
+('Epoch', 34, ' ,    Loss Per Epoch: ', 1.7567965266115175)
+training accuracy: 0.49
+('Epoch', 35, ' ,    Loss Per Epoch: ', 1.7441808594956592)
+training accuracy: 0.49
+('Epoch', 36, ' ,    Loss Per Epoch: ', 1.7316642895006318)
+training accuracy: 0.49
+('Epoch', 37, ' ,    Loss Per Epoch: ', 1.7192540692394334)
+training accuracy: 0.50
+('Epoch', 38, ' ,    Loss Per Epoch: ', 1.7069699475427966)
+training accuracy: 0.50
+('Epoch', 39, ' ,    Loss Per Epoch: ', 1.6947758144156222)
+training accuracy: 0.50
+('Epoch', 40, ' ,    Loss Per Epoch: ', 1.6826822157379087)
+training accuracy: 0.51
+('Epoch', 41, ' ,    Loss Per Epoch: ', 1.6706715155738006)
+training accuracy: 0.51
+('Epoch', 42, ' ,    Loss Per Epoch: ', 1.658765796896484)
+training accuracy: 0.52
+('Epoch', 43, ' ,    Loss Per Epoch: ', 1.64692144425481)
+training accuracy: 0.53
+('Epoch', 44, ' ,    Loss Per Epoch: ', 1.6351625360796436)
+training accuracy: 0.54
+('Epoch', 45, ' ,    Loss Per Epoch: ', 1.6234817529264827)
+training accuracy: 0.54
+('Epoch', 46, ' ,    Loss Per Epoch: ', 1.6118582902437315)
+training accuracy: 0.54
+('Epoch', 47, ' ,    Loss Per Epoch: ', 1.6002922898964276)
+training accuracy: 0.55
+('Epoch', 48, ' ,    Loss Per Epoch: ', 1.588787140810117)
+training accuracy: 0.55
+('Epoch', 49, ' ,    Loss Per Epoch: ', 1.5773401245340968)
+training accuracy: 0.55
+('Epoch', 50, ' ,    Loss Per Epoch: ', 1.5659603231281587)
+training accuracy: 0.55
+('Epoch', 51, ' ,    Loss Per Epoch: ', 1.5546386060762691)
+training accuracy: 0.55
+('Epoch', 52, ' ,    Loss Per Epoch: ', 1.5433530082540443)
+training accuracy: 0.55
+('Epoch', 53, ' ,    Loss Per Epoch: ', 1.5321080411046186)
+training accuracy: 0.55
+('Epoch', 54, ' ,    Loss Per Epoch: ', 1.5209195091919705)
+training accuracy: 0.56
+('Epoch', 55, ' ,    Loss Per Epoch: ', 1.5097755247089328)
+training accuracy: 0.57
+('Epoch', 56, ' ,    Loss Per Epoch: ', 1.4986830930811272)
+training accuracy: 0.57
+('Epoch', 57, ' ,    Loss Per Epoch: ', 1.4876351866430144)
+training accuracy: 0.58
+('Epoch', 58, ' ,    Loss Per Epoch: ', 1.4766161698692157)
+training accuracy: 0.58
+('Epoch', 59, ' ,    Loss Per Epoch: ', 1.465627980276647)
+training accuracy: 0.59
+('Epoch', 60, ' ,    Loss Per Epoch: ', 1.4546694527768897)
+training accuracy: 0.60
+('Epoch', 61, ' ,    Loss Per Epoch: ', 1.4437562359814469)
+training accuracy: 0.60
+('Epoch', 62, ' ,    Loss Per Epoch: ', 1.4328972610581827)
+training accuracy: 0.61
+('Epoch', 63, ' ,    Loss Per Epoch: ', 1.422057013282396)
+training accuracy: 0.61
+('Epoch', 64, ' ,    Loss Per Epoch: ', 1.4112713912265629)
+training accuracy: 0.61
+('Epoch', 65, ' ,    Loss Per Epoch: ', 1.40051492293825)
+training accuracy: 0.62
+('Epoch', 66, ' ,    Loss Per Epoch: ', 1.3898069775652435)
+training accuracy: 0.62
+('Epoch', 67, ' ,    Loss Per Epoch: ', 1.3791277165306586)
+training accuracy: 0.62
+('Epoch', 68, ' ,    Loss Per Epoch: ', 1.3684708292848007)
+training accuracy: 0.62
+('Epoch', 69, ' ,    Loss Per Epoch: ', 1.3578627556565646)
+training accuracy: 0.63
+('Epoch', 70, ' ,    Loss Per Epoch: ', 1.3473037557692122)
+training accuracy: 0.64
+('Epoch', 71, ' ,    Loss Per Epoch: ', 1.3367703805923914)
+training accuracy: 0.64
+('Epoch', 72, ' ,    Loss Per Epoch: ', 1.3262633857018455)
+training accuracy: 0.64
+('Epoch', 73, ' ,    Loss Per Epoch: ', 1.3157966888982016)
+training accuracy: 0.64
+('Epoch', 74, ' ,    Loss Per Epoch: ', 1.3053517419506748)
+training accuracy: 0.65
+('Epoch', 75, ' ,    Loss Per Epoch: ', 1.294947887981321)
+training accuracy: 0.65
+('Epoch', 76, ' ,    Loss Per Epoch: ', 1.2845768988555213)
+training accuracy: 0.65
+('Epoch', 77, ' ,    Loss Per Epoch: ', 1.2742480983325066)
+training accuracy: 0.65
+('Epoch', 78, ' ,    Loss Per Epoch: ', 1.2639443578162082)
+training accuracy: 0.66
+('Epoch', 79, ' ,    Loss Per Epoch: ', 1.253688983679233)
+training accuracy: 0.66
+('Epoch', 80, ' ,    Loss Per Epoch: ', 1.2434892375221507)
+training accuracy: 0.66
+('Epoch', 81, ' ,    Loss Per Epoch: ', 1.2333035612114567)
+training accuracy: 0.68
+('Epoch', 82, ' ,    Loss Per Epoch: ', 1.2231440231684596)
+training accuracy: 0.68
+('Epoch', 83, ' ,    Loss Per Epoch: ', 1.2130353700772043)
+training accuracy: 0.70
+('Epoch', 84, ' ,    Loss Per Epoch: ', 1.2029610446421815)
+training accuracy: 0.70
+('Epoch', 85, ' ,    Loss Per Epoch: ', 1.192911219028905)
+training accuracy: 0.71
+('Epoch', 86, ' ,    Loss Per Epoch: ', 1.1828997954408937)
+training accuracy: 0.71
+('Epoch', 87, ' ,    Loss Per Epoch: ', 1.1729323792469826)
+training accuracy: 0.72
+('Epoch', 88, ' ,    Loss Per Epoch: ', 1.162983478773879)
+training accuracy: 0.72
+('Epoch', 89, ' ,    Loss Per Epoch: ', 1.1530679202656282)
+training accuracy: 0.73
+('Epoch', 90, ' ,    Loss Per Epoch: ', 1.1431933190277188)
+training accuracy: 0.73
+('Epoch', 91, ' ,    Loss Per Epoch: ', 1.1333492279518649)
+training accuracy: 0.73
+('Epoch', 92, ' ,    Loss Per Epoch: ', 1.1235396683437375)
+training accuracy: 0.73
+('Epoch', 93, ' ,    Loss Per Epoch: ', 1.1137636268441746)
+training accuracy: 0.73
+('Epoch', 94, ' ,    Loss Per Epoch: ', 1.1040281964784497)
+training accuracy: 0.73
+('Epoch', 95, ' ,    Loss Per Epoch: ', 1.0943194463786357)
+training accuracy: 0.73
+('Epoch', 96, ' ,    Loss Per Epoch: ', 1.0846614046953835)
+training accuracy: 0.73
+('Epoch', 97, ' ,    Loss Per Epoch: ', 1.075041552742481)
+training accuracy: 0.73
+('Epoch', 98, ' ,    Loss Per Epoch: ', 1.0654463047049247)
+training accuracy: 0.73
+('Epoch', 99, ' ,    Loss Per Epoch: ', 1.0559057041163515)
+training accuracy: 0.74
+('Epoch', 100, ' ,    Loss Per Epoch: ', 1.04640890351943)
+training accuracy: 0.75
+('Epoch', 101, ' ,    Loss Per Epoch: ', 1.0369402609143417)
+training accuracy: 0.74
+('Epoch', 102, ' ,    Loss Per Epoch: ', 1.0275315757103631)
+training accuracy: 0.74
+('Epoch', 103, ' ,    Loss Per Epoch: ', 1.0181667043951403)
+training accuracy: 0.75
+('Epoch', 104, ' ,    Loss Per Epoch: ', 1.0088402451343268)
+training accuracy: 0.76
+('Epoch', 105, ' ,    Loss Per Epoch: ', 0.9995711469889713)
+training accuracy: 0.76
+('Epoch', 106, ' ,    Loss Per Epoch: ', 0.9903293278045202)
+training accuracy: 0.76
+('Epoch', 107, ' ,    Loss Per Epoch: ', 0.9811374493223587)
+training accuracy: 0.76
+('Epoch', 108, ' ,    Loss Per Epoch: ', 0.9719806720771578)
+training accuracy: 0.76
+('Epoch', 109, ' ,    Loss Per Epoch: ', 0.962866377358096)
+training accuracy: 0.76
+('Epoch', 110, ' ,    Loss Per Epoch: ', 0.953818148512722)
+training accuracy: 0.76
+('Epoch', 111, ' ,    Loss Per Epoch: ', 0.9447893121397521)
+training accuracy: 0.77
+('Epoch', 112, ' ,    Loss Per Epoch: ', 0.9358303007471036)
+training accuracy: 0.77
+('Epoch', 113, ' ,    Loss Per Epoch: ', 0.9269125877731761)
+training accuracy: 0.77
+('Epoch', 114, ' ,    Loss Per Epoch: ', 0.9180297900766098)
+training accuracy: 0.77
+('Epoch', 115, ' ,    Loss Per Epoch: ', 0.9091738912189333)
+training accuracy: 0.77
+('Epoch', 116, ' ,    Loss Per Epoch: ', 0.900377967167178)
+training accuracy: 0.78
+('Epoch', 117, ' ,    Loss Per Epoch: ', 0.8916144036895945)
+training accuracy: 0.78
+('Epoch', 118, ' ,    Loss Per Epoch: ', 0.8829151331941798)
+training accuracy: 0.78
+('Epoch', 119, ' ,    Loss Per Epoch: ', 0.8742570768741524)
+training accuracy: 0.78
+('Epoch', 120, ' ,    Loss Per Epoch: ', 0.8656600219012114)
+training accuracy: 0.78
+('Epoch', 121, ' ,    Loss Per Epoch: ', 0.8571004566183814)
+training accuracy: 0.79
+('Epoch', 122, ' ,    Loss Per Epoch: ', 0.8485995283126766)
+training accuracy: 0.79
+('Epoch', 123, ' ,    Loss Per Epoch: ', 0.840130899082979)
+training accuracy: 0.80
+('Epoch', 124, ' ,    Loss Per Epoch: ', 0.8317406269118715)
+training accuracy: 0.80
+('Epoch', 125, ' ,    Loss Per Epoch: ', 0.8233841533351188)
+training accuracy: 0.80
+('Epoch', 126, ' ,    Loss Per Epoch: ', 0.8150921720578972)
+training accuracy: 0.80
+('Epoch', 127, ' ,    Loss Per Epoch: ', 0.8068194930886259)
+training accuracy: 0.80
+('Epoch', 128, ' ,    Loss Per Epoch: ', 0.798614581543364)
+training accuracy: 0.80
+('Epoch', 129, ' ,    Loss Per Epoch: ', 0.7904589107158438)
+training accuracy: 0.80
+('Epoch', 130, ' ,    Loss Per Epoch: ', 0.7823580426377292)
+training accuracy: 0.80
+('Epoch', 131, ' ,    Loss Per Epoch: ', 0.7743088277806441)
+training accuracy: 0.81
+('Epoch', 132, ' ,    Loss Per Epoch: ', 0.7663191907262654)
+training accuracy: 0.81
+('Epoch', 133, ' ,    Loss Per Epoch: ', 0.7583805310571332)
+training accuracy: 0.81
+('Epoch', 134, ' ,    Loss Per Epoch: ', 0.7505035293273914)
+training accuracy: 0.82
+('Epoch', 135, ' ,    Loss Per Epoch: ', 0.742677469948122)
+training accuracy: 0.83
+('Epoch', 136, ' ,    Loss Per Epoch: ', 0.7349172008138358)
+training accuracy: 0.83
+('Epoch', 137, ' ,    Loss Per Epoch: ', 0.7271969712715765)
+training accuracy: 0.83
+('Epoch', 138, ' ,    Loss Per Epoch: ', 0.7195246593413852)
+training accuracy: 0.83
+('Epoch', 139, ' ,    Loss Per Epoch: ', 0.7119355098229431)
+training accuracy: 0.84
+('Epoch', 140, ' ,    Loss Per Epoch: ', 0.7043825105093061)
+training accuracy: 0.84
+('Epoch', 141, ' ,    Loss Per Epoch: ', 0.6968879784667726)
+training accuracy: 0.84
+('Epoch', 142, ' ,    Loss Per Epoch: ', 0.6894656191403257)
+training accuracy: 0.84
+('Epoch', 143, ' ,    Loss Per Epoch: ', 0.6820864235335719)
+training accuracy: 0.85
+('Epoch', 144, ' ,    Loss Per Epoch: ', 0.6747632465777935)
+training accuracy: 0.85
+('Epoch', 145, ' ,    Loss Per Epoch: ', 0.6674915436478804)
+training accuracy: 0.86
+('Epoch', 146, ' ,    Loss Per Epoch: ', 0.6602933554909214)
+training accuracy: 0.86
+('Epoch', 147, ' ,    Loss Per Epoch: ', 0.6531630721179957)
+training accuracy: 0.86
+('Epoch', 148, ' ,    Loss Per Epoch: ', 0.6460993668881033)
+training accuracy: 0.87
+('Epoch', 149, ' ,    Loss Per Epoch: ', 0.6390769408711351)
+training accuracy: 0.87
+('Epoch', 150, ' ,    Loss Per Epoch: ', 0.6321095918436848)
+training accuracy: 0.87
+('Epoch', 151, ' ,    Loss Per Epoch: ', 0.6252043769602305)
+training accuracy: 0.87
+('Epoch', 152, ' ,    Loss Per Epoch: ', 0.6183539738682887)
+training accuracy: 0.87
+('Epoch', 153, ' ,    Loss Per Epoch: ', 0.6115570319001397)
+training accuracy: 0.87
+('Epoch', 154, ' ,    Loss Per Epoch: ', 0.6048356984734684)
+training accuracy: 0.87
+('Epoch', 155, ' ,    Loss Per Epoch: ', 0.5981582613863503)
+training accuracy: 0.87
+('Epoch', 156, ' ,    Loss Per Epoch: ', 0.5915536408110338)
+training accuracy: 0.88
+('Epoch', 157, ' ,    Loss Per Epoch: ', 0.5850056580715526)
+training accuracy: 0.88
+('Epoch', 158, ' ,    Loss Per Epoch: ', 0.578520488966443)
+training accuracy: 0.88
+('Epoch', 159, ' ,    Loss Per Epoch: ', 0.5720801343127315)
+training accuracy: 0.88
+('Epoch', 160, ' ,    Loss Per Epoch: ', 0.5656992990665416)
+training accuracy: 0.89
+('Epoch', 161, ' ,    Loss Per Epoch: ', 0.5593896701033665)
+training accuracy: 0.89
+('Epoch', 162, ' ,    Loss Per Epoch: ', 0.5531306101107734)
+training accuracy: 0.89
+('Epoch', 163, ' ,    Loss Per Epoch: ', 0.5469285892231667)
+training accuracy: 0.89
+('Epoch', 164, ' ,    Loss Per Epoch: ', 0.5407811228113758)
+training accuracy: 0.89
+('Epoch', 165, ' ,    Loss Per Epoch: ', 0.53469745471436)
+training accuracy: 0.90
+('Epoch', 166, ' ,    Loss Per Epoch: ', 0.5286622351609407)
+training accuracy: 0.90
+('Epoch', 167, ' ,    Loss Per Epoch: ', 0.5226946408110422)
+training accuracy: 0.91
+('Epoch', 168, ' ,    Loss Per Epoch: ', 0.5167862546873594)
+training accuracy: 0.91
+('Epoch', 169, ' ,    Loss Per Epoch: ', 0.5109373976196344)
+training accuracy: 0.91
+('Epoch', 170, ' ,    Loss Per Epoch: ', 0.5051552871197095)
+training accuracy: 0.91
+('Epoch', 171, ' ,    Loss Per Epoch: ', 0.4994186746036827)
+training accuracy: 0.91
+('Epoch', 172, ' ,    Loss Per Epoch: ', 0.49373711857634833)
+training accuracy: 0.91
+('Epoch', 173, ' ,    Loss Per Epoch: ', 0.4881231297054613)
+training accuracy: 0.91
+('Epoch', 174, ' ,    Loss Per Epoch: ', 0.4825643989586784)
+training accuracy: 0.91
+('Epoch', 175, ' ,    Loss Per Epoch: ', 0.47706801765137224)
+training accuracy: 0.91
+('Epoch', 176, ' ,    Loss Per Epoch: ', 0.4716218393807202)
+training accuracy: 0.91
+('Epoch', 177, ' ,    Loss Per Epoch: ', 0.4662423038126994)
+training accuracy: 0.91
+('Epoch', 178, ' ,    Loss Per Epoch: ', 0.4609072322455133)
+training accuracy: 0.91
+('Epoch', 179, ' ,    Loss Per Epoch: ', 0.4556343568101225)
+training accuracy: 0.91
+('Epoch', 180, ' ,    Loss Per Epoch: ', 0.4504176529354931)
+training accuracy: 0.91
+('Epoch', 181, ' ,    Loss Per Epoch: ', 0.4452659894832381)
+training accuracy: 0.92
+('Epoch', 182, ' ,    Loss Per Epoch: ', 0.44016050499292947)
+training accuracy: 0.92
+('Epoch', 183, ' ,    Loss Per Epoch: ', 0.4351173273022611)
+training accuracy: 0.92
+('Epoch', 184, ' ,    Loss Per Epoch: ', 0.4301261764160867)
+training accuracy: 0.93
+('Epoch', 185, ' ,    Loss Per Epoch: ', 0.4252040614336202)
+training accuracy: 0.93
+('Epoch', 186, ' ,    Loss Per Epoch: ', 0.4203184501550791)
+training accuracy: 0.93
+('Epoch', 187, ' ,    Loss Per Epoch: ', 0.4154893692315459)
+training accuracy: 0.94
+('Epoch', 188, ' ,    Loss Per Epoch: ', 0.41072433011455334)
+training accuracy: 0.94
+('Epoch', 189, ' ,    Loss Per Epoch: ', 0.4060008138706971)
+training accuracy: 0.94
+('Epoch', 190, ' ,    Loss Per Epoch: ', 0.4013358651582705)
+training accuracy: 0.94
+('Epoch', 191, ' ,    Loss Per Epoch: ', 0.39671983412405815)
+training accuracy: 0.94
+('Epoch', 192, ' ,    Loss Per Epoch: ', 0.39215389781092636)
+training accuracy: 0.94
+('Epoch', 193, ' ,    Loss Per Epoch: ', 0.3876468843402092)
+training accuracy: 0.94
+('Epoch', 194, ' ,    Loss Per Epoch: ', 0.3831974374549259)
+training accuracy: 0.95
+('Epoch', 195, ' ,    Loss Per Epoch: ', 0.37878998447510465)
+training accuracy: 0.95
+('Epoch', 196, ' ,    Loss Per Epoch: ', 0.3744328949435641)
+training accuracy: 0.95
+('Epoch', 197, ' ,    Loss Per Epoch: ', 0.37013811315106415)
+training accuracy: 0.95
+('Epoch', 198, ' ,    Loss Per Epoch: ', 0.3659032946737437)
+training accuracy: 0.95
+('Epoch', 199, ' ,    Loss Per Epoch: ', 0.36169031186056455)
+training accuracy: 0.96
+('Epoch', 200, ' ,    Loss Per Epoch: ', 0.35755679512589716)
+training accuracy: 0.96
+('Epoch', 201, ' ,    Loss Per Epoch: ', 0.35345274685528466)
+training accuracy: 0.96
+('Epoch', 202, ' ,    Loss Per Epoch: ', 0.34940699886585963)
+training accuracy: 0.96
+('Epoch', 203, ' ,    Loss Per Epoch: ', 0.34541768626762537)
+training accuracy: 0.96
+('Epoch', 204, ' ,    Loss Per Epoch: ', 0.3414607008514416)
+training accuracy: 0.96
+('Epoch', 205, ' ,    Loss Per Epoch: ', 0.33755092034932643)
+training accuracy: 0.96
+('Epoch', 206, ' ,    Loss Per Epoch: ', 0.333693645495339)
+training accuracy: 0.96
+('Epoch', 207, ' ,    Loss Per Epoch: ', 0.32988111928134634)
+training accuracy: 0.96
+('Epoch', 208, ' ,    Loss Per Epoch: ', 0.326120284552826)
+training accuracy: 0.96
+('Epoch', 209, ' ,    Loss Per Epoch: ', 0.32240025237378706)
+training accuracy: 0.96
+('Epoch', 210, ' ,    Loss Per Epoch: ', 0.31872104512029686)
+training accuracy: 0.96
+('Epoch', 211, ' ,    Loss Per Epoch: ', 0.31509517110977886)
+training accuracy: 0.96
+('Epoch', 212, ' ,    Loss Per Epoch: ', 0.3115072232427798)
+training accuracy: 0.96
+('Epoch', 213, ' ,    Loss Per Epoch: ', 0.3079547790483112)
+training accuracy: 0.96
+('Epoch', 214, ' ,    Loss Per Epoch: ', 0.3044585137469397)
+training accuracy: 0.96
+('Epoch', 215, ' ,    Loss Per Epoch: ', 0.30100526712359127)
+training accuracy: 0.96
+('Epoch', 216, ' ,    Loss Per Epoch: ', 0.2975875234156571)
+training accuracy: 0.96
+('Epoch', 217, ' ,    Loss Per Epoch: ', 0.2942172923158773)
+training accuracy: 0.96
+('Epoch', 218, ' ,    Loss Per Epoch: ', 0.2908795479590661)
+training accuracy: 0.96
+('Epoch', 219, ' ,    Loss Per Epoch: ', 0.2875870661336873)
+training accuracy: 0.96
+('Epoch', 220, ' ,    Loss Per Epoch: ', 0.28434314557789475)
+training accuracy: 0.96
+('Epoch', 221, ' ,    Loss Per Epoch: ', 0.28114044105553204)
+training accuracy: 0.96
+('Epoch', 222, ' ,    Loss Per Epoch: ', 0.27796584541712177)
+training accuracy: 0.96
+('Epoch', 223, ' ,    Loss Per Epoch: ', 0.2748395083555661)
+training accuracy: 0.96
+('Epoch', 224, ' ,    Loss Per Epoch: ', 0.2717518255287876)
+training accuracy: 0.96
+('Epoch', 225, ' ,    Loss Per Epoch: ', 0.2687069628639947)
+training accuracy: 0.96
+('Epoch', 226, ' ,    Loss Per Epoch: ', 0.26569575485324776)
+training accuracy: 0.96
+('Epoch', 227, ' ,    Loss Per Epoch: ', 0.26272639889112)
+training accuracy: 0.96
+('Epoch', 228, ' ,    Loss Per Epoch: ', 0.2597882879553616)
+training accuracy: 0.96
+('Epoch', 229, ' ,    Loss Per Epoch: ', 0.2568942840708935)
+training accuracy: 0.96
+('Epoch', 230, ' ,    Loss Per Epoch: ', 0.25403801321569075)
+training accuracy: 0.96
+('Epoch', 231, ' ,    Loss Per Epoch: ', 0.2512130502855891)
+training accuracy: 0.96
+('Epoch', 232, ' ,    Loss Per Epoch: ', 0.2484278838929491)
+training accuracy: 0.96
+('Epoch', 233, ' ,    Loss Per Epoch: ', 0.24567233167040264)
+training accuracy: 0.96
+('Epoch', 234, ' ,    Loss Per Epoch: ', 0.24296221516167266)
+training accuracy: 0.96
+('Epoch', 235, ' ,    Loss Per Epoch: ', 0.24027496516940772)
+training accuracy: 0.96
+('Epoch', 236, ' ,    Loss Per Epoch: ', 0.23762890544879417)
+training accuracy: 0.96
+('Epoch', 237, ' ,    Loss Per Epoch: ', 0.23501609128791848)
+training accuracy: 0.96
+('Epoch', 238, ' ,    Loss Per Epoch: ', 0.2324427937978539)
+training accuracy: 0.96
+('Epoch', 239, ' ,    Loss Per Epoch: ', 0.22990219825386804)
+training accuracy: 0.96
+('Epoch', 240, ' ,    Loss Per Epoch: ', 0.22738598150177206)
+training accuracy: 0.97
+('Epoch', 241, ' ,    Loss Per Epoch: ', 0.22490749409552618)
+training accuracy: 0.97
+('Epoch', 242, ' ,    Loss Per Epoch: ', 0.22245932674031538)
+training accuracy: 0.97
+('Epoch', 243, ' ,    Loss Per Epoch: ', 0.2200456354423268)
+training accuracy: 0.97
+('Epoch', 244, ' ,    Loss Per Epoch: ', 0.21765367455526652)
+training accuracy: 0.97
+('Epoch', 245, ' ,    Loss Per Epoch: ', 0.21530227366491908)
+training accuracy: 0.98
+('Epoch', 246, ' ,    Loss Per Epoch: ', 0.21297086993785683)
+training accuracy: 0.98
+('Epoch', 247, ' ,    Loss Per Epoch: ', 0.2106837819668345)
+training accuracy: 0.98
+('Epoch', 248, ' ,    Loss Per Epoch: ', 0.2084152688975002)
+training accuracy: 0.98
+('Epoch', 249, ' ,    Loss Per Epoch: ', 0.20618484313203092)
+training accuracy: 0.98
+('Epoch', 250, ' ,    Loss Per Epoch: ', 0.20397856882479531)
+training accuracy: 0.98
+('Epoch', 251, ' ,    Loss Per Epoch: ', 0.20179266824487915)
+training accuracy: 0.98
+('Epoch', 252, ' ,    Loss Per Epoch: ', 0.19964681761784084)
+training accuracy: 0.98
+('Epoch', 253, ' ,    Loss Per Epoch: ', 0.19752722884217477)
+training accuracy: 0.98
+('Epoch', 254, ' ,    Loss Per Epoch: ', 0.19543052879213235)
+training accuracy: 0.98
+('Epoch', 255, ' ,    Loss Per Epoch: ', 0.19337487435040746)
+training accuracy: 0.98
+('Epoch', 256, ' ,    Loss Per Epoch: ', 0.19132648024837703)
+training accuracy: 0.99
+('Epoch', 257, ' ,    Loss Per Epoch: ', 0.189317778362377)
+training accuracy: 0.99
+('Epoch', 258, ' ,    Loss Per Epoch: ', 0.1873294755277223)
+training accuracy: 0.99
+('Epoch', 259, ' ,    Loss Per Epoch: ', 0.18537079933236397)
+training accuracy: 0.99
+('Epoch', 260, ' ,    Loss Per Epoch: ', 0.18343691181628077)
+training accuracy: 0.99
+('Epoch', 261, ' ,    Loss Per Epoch: ', 0.18152445511685358)
+training accuracy: 0.99
+('Epoch', 262, ' ,    Loss Per Epoch: ', 0.17964130212699295)
+training accuracy: 0.99
+('Epoch', 263, ' ,    Loss Per Epoch: ', 0.1777796390838037)
+training accuracy: 0.99
+('Epoch', 264, ' ,    Loss Per Epoch: ', 0.17595037585037446)
+training accuracy: 0.99
+('Epoch', 265, ' ,    Loss Per Epoch: ', 0.17413744610076493)
+training accuracy: 0.99
+('Epoch', 266, ' ,    Loss Per Epoch: ', 0.17235158257178304)
+training accuracy: 0.99
+('Epoch', 267, ' ,    Loss Per Epoch: ', 0.17058669465682363)
+training accuracy: 0.99
+('Epoch', 268, ' ,    Loss Per Epoch: ', 0.1688428892099029)
+training accuracy: 0.99
+('Epoch', 269, ' ,    Loss Per Epoch: ', 0.16712534685307803)
+training accuracy: 0.99
+('Epoch', 270, ' ,    Loss Per Epoch: ', 0.16543052400086353)
+training accuracy: 0.99
+('Epoch', 271, ' ,    Loss Per Epoch: ', 0.1637572666973866)
+training accuracy: 0.99
+('Epoch', 272, ' ,    Loss Per Epoch: ', 0.16210521461545738)
+training accuracy: 0.99
+('Epoch', 273, ' ,    Loss Per Epoch: ', 0.1604721584511872)
+training accuracy: 1.00
+('Epoch', 274, ' ,    Loss Per Epoch: ', 0.158869590750242)
+training accuracy: 1.00
+('Epoch', 275, ' ,    Loss Per Epoch: ', 0.15727848662403757)
+training accuracy: 1.00
+('Epoch', 276, ' ,    Loss Per Epoch: ', 0.15571597185393876)
+training accuracy: 1.00
+('Epoch', 277, ' ,    Loss Per Epoch: ', 0.1541648438425122)
+training accuracy: 1.00
+('Epoch', 278, ' ,    Loss Per Epoch: ', 0.15264067009677412)
+training accuracy: 1.00
+('Epoch', 279, ' ,    Loss Per Epoch: ', 0.15113332976439117)
+training accuracy: 1.00
+('Epoch', 280, ' ,    Loss Per Epoch: ', 0.14965371573388508)
+training accuracy: 1.00
+('Epoch', 281, ' ,    Loss Per Epoch: ', 0.1481835477958867)
+training accuracy: 1.00
+('Epoch', 282, ' ,    Loss Per Epoch: ', 0.14673968832424897)
+training accuracy: 1.00
+('Epoch', 283, ' ,    Loss Per Epoch: ', 0.14531130012029686)
+training accuracy: 1.00
+('Epoch', 284, ' ,    Loss Per Epoch: ', 0.14390317559991336)
+training accuracy: 1.00
+('Epoch', 285, ' ,    Loss Per Epoch: ', 0.14251138937574936)
+training accuracy: 1.00
+('Epoch', 286, ' ,    Loss Per Epoch: ', 0.14113265066600028)
+training accuracy: 1.00
+('Epoch', 287, ' ,    Loss Per Epoch: ', 0.13978572719642615)
+training accuracy: 1.00
+('Epoch', 288, ' ,    Loss Per Epoch: ', 0.1384475325693905)
+training accuracy: 1.00
+('Epoch', 289, ' ,    Loss Per Epoch: ', 0.13712912905914626)
+training accuracy: 1.00
+('Epoch', 290, ' ,    Loss Per Epoch: ', 0.13582302717889924)
+training accuracy: 1.00
+('Epoch', 291, ' ,    Loss Per Epoch: ', 0.13453736435173974)
+training accuracy: 1.00
+('Epoch', 292, ' ,    Loss Per Epoch: ', 0.13326643949844802)
+training accuracy: 1.00
+('Epoch', 293, ' ,    Loss Per Epoch: ', 0.13200963837386664)
+training accuracy: 1.00
+('Epoch', 294, ' ,    Loss Per Epoch: ', 0.1307739749181918)
+training accuracy: 1.00
+('Epoch', 295, ' ,    Loss Per Epoch: ', 0.1295532405514352)
+training accuracy: 1.00
+('Epoch', 296, ' ,    Loss Per Epoch: ', 0.12834598210886564)
+training accuracy: 1.00
+('Epoch', 297, ' ,    Loss Per Epoch: ', 0.12715820654567708)
+training accuracy: 1.00
+('Epoch', 298, ' ,    Loss Per Epoch: ', 0.12598681146252957)
+training accuracy: 1.00
+('Epoch', 299, ' ,    Loss Per Epoch: ', 0.12482422530784099)
+training accuracy: 1.00
+
+Validation accuracy: 0.21

@@ -1,0 +1,3363 @@
+
+Jupyter Notebook
+NeuralNetwork Last Checkpoint: 19 hours ago (unsaved changes)
+
+Python 2
+
+    File
+    Edit
+    View
+    Insert
+    Cell
+    Kernel
+    Help
+
+import numpy as np
+
+import pylab as pl
+
+import math
+
+from sklearn.utils import shuffle
+
+import matplotlib.pyplot as plotter
+
+from pickle import *
+
+def unpickle(file):
+
+    import pickle
+
+    with open(file, 'rb') as fo:
+
+        dict = pickle.load(fo)
+
+        return dict
+
+datadict = unpickle("./Data/cifar-100-python/train")
+
+xTrain = datadict[b'data']
+
+yTrain = datadict[b'coarse_labels']
+
+xtr= xTrain[:40000]
+
+ytr= yTrain[:40000]
+
+xval = xTrain[40000:]
+
+yval = yTrain[40000:]
+
+def SoftmaxFn(classscores,y):
+
+    exps = np.exp(classscores,dtype=np.float64)
+
+    probability = exps / np.sum(exps, axis=1, keepdims=True)
+
+    q = exps.shape[0]
+
+    correct_log = -np.log(probability[np.arange(q),y] + 1e-9)             
+
+    return correct_log,probability
+
+def ReLUFwd(x):
+
+    return np.maximum(0.1*x,x,dtype=np.float64)
+
+def FwdPass(w,b,layers,E,x,MiniBatchSize):
+
+    layers_step = []
+
+    HiddenNeurons1 = ReLUFwd(np.dot(x[E*MiniBatchSize:(E+1)*MiniBatchSize],w[0])+b[0])
+
+    layers_step.append(HiddenNeurons1)
+
+    HiddenNeurons2 = ReLUFwd(np.dot(HiddenNeurons1,w[1])+b[1])
+
+    layers_step.append(HiddenNeurons2)
+
+    scores = ReLUFwd(np.dot(HiddenNeurons2,w[2])+b[2])
+
+    layers_step.append(scores)
+
+    return scores,layers_step
+
+def BackwdPass(E,layers,layers_step,probability,ytr,Examples,w):
+
+    gradient_scores = probability
+
+    gradient_scores[np.arange(MiniBatchSize),ytr[E*MiniBatchSize:(E+1)*MiniBatchSize]] -= 1
+
+    gradient_scores /= MiniBatchSize
+
+    derivative_step = gradient_scores
+
+    dw = []
+
+    db = []
+
+    #This loops twice to get DW between Layer 2 and Out, and between Layer 1 and Layer 2
+
+    for i in reversed(range(len(layers_step)-1)):
+
+        dw.append(np.dot(layers_step[i].T,derivative_step))
+
+        db.append(np.sum(derivative_step,axis=0,keepdims=True))
+
+        dh = np.dot(derivative_step,w[i+1].T)
+
+        dh[layers_step[i] <= 0] *= 0.1
+
+        derivative_step = dh
+
+    #This is to get DW and DB between Input Layer and Layer 1 
+
+    dw.append(np.dot(xtr[E*MiniBatchSize:(E+1)*MiniBatchSize].T,dh))
+
+    db.append(np.sum(dh,axis=0,keepdims=True))
+
+    return dw,db
+
+#Dimensions and Layers
+
+# Dimensions = 3072
+
+# hidden1 = 1024
+
+# hidden2 = 512
+
+# classes = 20
+
+MiniBatchSize = 256
+
+layers = [3072,2048,1024,20]
+
+​
+
+#HyperParameters
+
+learn_rate = 2e-3
+
+reg = 1e-3
+
+beta1 = 0.9
+
+beta2 = 0.999
+
+​
+
+Examples = xtr.shape[0]
+
+valid_examples = xval.shape[0]
+
+#Data Preprocessing (Zero Centering and Normalization)
+
+xtr = np.array(xtr,dtype=np.float64)
+
+xtr -= np.mean(xtr)
+
+xtr /= np.std(xtr)
+
+xval = np.array(xval,dtype=np.float64)
+
+xval -= np.mean(xval)
+
+xval /= np.std(xval)
+
+np.random.seed(0)
+
+w = []
+
+b = []
+
+momentum = 0
+
+accum = 0
+
+#Initializing Weights
+
+for i in range(len(layers)-1):
+
+    w.append(np.random.randn(layers[i],layers[i+1])/np.sqrt(layers[i]/2)) 
+
+    b.append(np.zeros((layers[i+1])))
+
+    
+
+minimum_loss = 9999999999999
+
+minimum_w = []
+
+minimum_b = []
+
+Loss_Per_Epoch = []
+
+for qq in range(1000):
+
+    Loss_Per_iter = []
+
+    for E in range(156):
+
+        scores,layers_step = FwdPass(w,b,layers,E,xtr,MiniBatchSize)
+
+        loss,probability = SoftmaxFn(scores,ytr[E*MiniBatchSize:(E+1)*MiniBatchSize])
+
+        reg_loss = 0.5*reg*np.sum(w[0]*w[0]) + 0.5*reg*np.sum(w[1]*w[1]) + 0.5*reg*np.sum(w[2]*w[2]) 
+
+        total_loss = loss + reg_loss
+
+        Loss_Per_iter.append(np.mean(total_loss,dtype=np.float64))
+
+​
+
+        dw,db = BackwdPass(E,layers,layers_step,probability,ytr,Examples, w)
+
+        dw = np.array(dw)
+
+        dw += reg * w
+
+​
+
+        #Swapping First Row with Last row because of difference in orders
+
+        dw[0],dw[2] = dw[2],dw[0]
+
+        db[0],db[2] = db[2],db[0]
+
+        #Updating Weights and Biases
+
+        momentum = (1-beta1)*dw + beta1*momentum
+
+#         accum = ((1-beta2)*(dw*dw)) + beta2*accum
+
+#         accum = dw+dw
+
+​
+
+#          for q in range(len(accum)):
+
+#              accum[q] = np.sqrt(accum[q],dtype=np.float64)
+
+       
+
+        w += -learn_rate * momentum
+
+#         w += -learn_rate * momentum / (accum + 1e-7)
+
+        for q in range(len(db)):
+
+            db[q] = np.reshape(db[q],(db[q].shape[1]))
+
+            b[q] += -learn_rate*db[q]
+
+        
+
+        if(np.mean(loss) < minimum_loss):
+
+            minimum_w = w
+
+            minimum_b = b
+
+            minimum_loss = np.mean(loss,dtype=np.float64)
+
+            
+
+    Loss_Per_Epoch.append(np.mean(Loss_Per_iter))
+
+    print("Epoch", qq, " ,    Loss Per Epoch: " , Loss_Per_Epoch[qq]) 
+
+    #Validation Set
+
+    scores_valid, layers_valid = FwdPass(minimum_w,minimum_b,layers,0,xval,valid_examples)
+
+    predicted_class_v = np.argmax(scores_valid, axis=1)
+
+    print ('Validation accuracy: %.2f' % (np.mean(predicted_class_v == yval)))
+
+    
+
+    predicted_class = np.argmax(scores, axis=1)
+
+    print ('training accuracy: %.2f' % (np.mean(predicted_class == ytr[E*MiniBatchSize:(E+1)*MiniBatchSize])) )
+
+('Epoch', 0, ' ,    Loss Per Epoch: ', 5.979467857062673)
+Validation accuracy: 0.18
+training accuracy: 0.17
+('Epoch', 1, ' ,    Loss Per Epoch: ', 5.695782761591093)
+Validation accuracy: 0.22
+training accuracy: 0.22
+('Epoch', 2, ' ,    Loss Per Epoch: ', 5.601802987017389)
+Validation accuracy: 0.24
+training accuracy: 0.25
+('Epoch', 3, ' ,    Loss Per Epoch: ', 5.540074062714806)
+Validation accuracy: 0.25
+training accuracy: 0.26
+('Epoch', 4, ' ,    Loss Per Epoch: ', 5.49318876164154)
+Validation accuracy: 0.26
+training accuracy: 0.27
+('Epoch', 5, ' ,    Loss Per Epoch: ', 5.454837951890287)
+Validation accuracy: 0.26
+training accuracy: 0.27
+('Epoch', 6, ' ,    Loss Per Epoch: ', 5.4220808716501505)
+Validation accuracy: 0.27
+training accuracy: 0.29
+('Epoch', 7, ' ,    Loss Per Epoch: ', 5.393339572935476)
+Validation accuracy: 0.27
+training accuracy: 0.30
+('Epoch', 8, ' ,    Loss Per Epoch: ', 5.3675909153579795)
+Validation accuracy: 0.28
+training accuracy: 0.30
+('Epoch', 9, ' ,    Loss Per Epoch: ', 5.344082814803375)
+Validation accuracy: 0.28
+training accuracy: 0.31
+('Epoch', 10, ' ,    Loss Per Epoch: ', 5.322346136569881)
+Validation accuracy: 0.29
+training accuracy: 0.33
+('Epoch', 11, ' ,    Loss Per Epoch: ', 5.302087828648265)
+Validation accuracy: 0.29
+training accuracy: 0.35
+('Epoch', 12, ' ,    Loss Per Epoch: ', 5.283086075466699)
+Validation accuracy: 0.29
+training accuracy: 0.35
+('Epoch', 13, ' ,    Loss Per Epoch: ', 5.265129555669355)
+Validation accuracy: 0.29
+training accuracy: 0.36
+('Epoch', 14, ' ,    Loss Per Epoch: ', 5.248108735544418)
+Validation accuracy: 0.29
+training accuracy: 0.36
+('Epoch', 15, ' ,    Loss Per Epoch: ', 5.231861533472292)
+Validation accuracy: 0.30
+training accuracy: 0.37
+('Epoch', 16, ' ,    Loss Per Epoch: ', 5.216315472541914)
+Validation accuracy: 0.30
+training accuracy: 0.38
+('Epoch', 17, ' ,    Loss Per Epoch: ', 5.2013850516412505)
+Validation accuracy: 0.30
+training accuracy: 0.38
+('Epoch', 18, ' ,    Loss Per Epoch: ', 5.186964088099597)
+Validation accuracy: 0.30
+training accuracy: 0.38
+('Epoch', 19, ' ,    Loss Per Epoch: ', 5.173045051344498)
+Validation accuracy: 0.31
+training accuracy: 0.39
+('Epoch', 20, ' ,    Loss Per Epoch: ', 5.159570052071044)
+Validation accuracy: 0.31
+training accuracy: 0.39
+('Epoch', 21, ' ,    Loss Per Epoch: ', 5.1465295712778945)
+Validation accuracy: 0.31
+training accuracy: 0.39
+('Epoch', 22, ' ,    Loss Per Epoch: ', 5.133862779969053)
+Validation accuracy: 0.31
+training accuracy: 0.40
+('Epoch', 23, ' ,    Loss Per Epoch: ', 5.121536314834545)
+Validation accuracy: 0.31
+training accuracy: 0.40
+('Epoch', 24, ' ,    Loss Per Epoch: ', 5.109506272406852)
+Validation accuracy: 0.31
+training accuracy: 0.41
+('Epoch', 25, ' ,    Loss Per Epoch: ', 5.0977308728875785)
+Validation accuracy: 0.31
+training accuracy: 0.41
+('Epoch', 26, ' ,    Loss Per Epoch: ', 5.086218197428288)
+Validation accuracy: 0.31
+training accuracy: 0.41
+('Epoch', 27, ' ,    Loss Per Epoch: ', 5.074935717420489)
+Validation accuracy: 0.32
+training accuracy: 0.42
+('Epoch', 28, ' ,    Loss Per Epoch: ', 5.063881783420099)
+Validation accuracy: 0.32
+training accuracy: 0.43
+('Epoch', 29, ' ,    Loss Per Epoch: ', 5.053066082487187)
+Validation accuracy: 0.32
+training accuracy: 0.44
+('Epoch', 30, ' ,    Loss Per Epoch: ', 5.042463751054545)
+Validation accuracy: 0.32
+training accuracy: 0.44
+('Epoch', 31, ' ,    Loss Per Epoch: ', 5.032016538140722)
+Validation accuracy: 0.32
+training accuracy: 0.45
+('Epoch', 32, ' ,    Loss Per Epoch: ', 5.021750730855033)
+Validation accuracy: 0.32
+training accuracy: 0.46
+('Epoch', 33, ' ,    Loss Per Epoch: ', 5.01166315633292)
+Validation accuracy: 0.32
+training accuracy: 0.45
+('Epoch', 34, ' ,    Loss Per Epoch: ', 5.001735518435255)
+Validation accuracy: 0.32
+training accuracy: 0.45
+('Epoch', 35, ' ,    Loss Per Epoch: ', 4.991954498055111)
+Validation accuracy: 0.32
+training accuracy: 0.46
+('Epoch', 36, ' ,    Loss Per Epoch: ', 4.982315043295978)
+Validation accuracy: 0.32
+training accuracy: 0.46
+('Epoch', 37, ' ,    Loss Per Epoch: ', 4.97279859494108)
+Validation accuracy: 0.32
+training accuracy: 0.46
+('Epoch', 38, ' ,    Loss Per Epoch: ', 4.96341895018274)
+Validation accuracy: 0.32
+training accuracy: 0.46
+('Epoch', 39, ' ,    Loss Per Epoch: ', 4.9541579230364325)
+Validation accuracy: 0.33
+training accuracy: 0.46
+('Epoch', 40, ' ,    Loss Per Epoch: ', 4.945020957016643)
+Validation accuracy: 0.33
+training accuracy: 0.46
+('Epoch', 41, ' ,    Loss Per Epoch: ', 4.935976411854062)
+Validation accuracy: 0.33
+training accuracy: 0.46
+('Epoch', 42, ' ,    Loss Per Epoch: ', 4.927010421128797)
+Validation accuracy: 0.33
+training accuracy: 0.47
+('Epoch', 43, ' ,    Loss Per Epoch: ', 4.918149918548456)
+Validation accuracy: 0.33
+training accuracy: 0.47
+('Epoch', 44, ' ,    Loss Per Epoch: ', 4.90938018830093)
+Validation accuracy: 0.33
+training accuracy: 0.47
+('Epoch', 45, ' ,    Loss Per Epoch: ', 4.9006987849540975)
+Validation accuracy: 0.33
+training accuracy: 0.47
+('Epoch', 46, ' ,    Loss Per Epoch: ', 4.892090809089628)
+Validation accuracy: 0.33
+training accuracy: 0.47
+('Epoch', 47, ' ,    Loss Per Epoch: ', 4.883569660483406)
+Validation accuracy: 0.33
+training accuracy: 0.48
+('Epoch', 48, ' ,    Loss Per Epoch: ', 4.875111039773553)
+Validation accuracy: 0.33
+training accuracy: 0.48
+('Epoch', 49, ' ,    Loss Per Epoch: ', 4.866721651187322)
+Validation accuracy: 0.33
+training accuracy: 0.48
+('Epoch', 50, ' ,    Loss Per Epoch: ', 4.858401576589981)
+Validation accuracy: 0.33
+training accuracy: 0.48
+('Epoch', 51, ' ,    Loss Per Epoch: ', 4.850146806132299)
+Validation accuracy: 0.33
+training accuracy: 0.49
+('Epoch', 52, ' ,    Loss Per Epoch: ', 4.841934116820311)
+Validation accuracy: 0.33
+training accuracy: 0.50
+('Epoch', 53, ' ,    Loss Per Epoch: ', 4.833793532672999)
+Validation accuracy: 0.34
+training accuracy: 0.50
+('Epoch', 54, ' ,    Loss Per Epoch: ', 4.82570382734404)
+Validation accuracy: 0.34
+training accuracy: 0.50
+('Epoch', 55, ' ,    Loss Per Epoch: ', 4.817656807809298)
+Validation accuracy: 0.34
+training accuracy: 0.50
+('Epoch', 56, ' ,    Loss Per Epoch: ', 4.809664432398438)
+Validation accuracy: 0.34
+training accuracy: 0.50
+('Epoch', 57, ' ,    Loss Per Epoch: ', 4.801727653725181)
+Validation accuracy: 0.34
+training accuracy: 0.50
+('Epoch', 58, ' ,    Loss Per Epoch: ', 4.793843547162552)
+Validation accuracy: 0.34
+training accuracy: 0.50
+('Epoch', 59, ' ,    Loss Per Epoch: ', 4.785999758635394)
+Validation accuracy: 0.34
+training accuracy: 0.50
+('Epoch', 60, ' ,    Loss Per Epoch: ', 4.7781909600306705)
+Validation accuracy: 0.34
+training accuracy: 0.51
+('Epoch', 61, ' ,    Loss Per Epoch: ', 4.770433958761219)
+Validation accuracy: 0.34
+training accuracy: 0.51
+('Epoch', 62, ' ,    Loss Per Epoch: ', 4.762731132921392)
+Validation accuracy: 0.34
+training accuracy: 0.51
+('Epoch', 63, ' ,    Loss Per Epoch: ', 4.755066664097823)
+Validation accuracy: 0.34
+training accuracy: 0.52
+('Epoch', 64, ' ,    Loss Per Epoch: ', 4.747442157474345)
+Validation accuracy: 0.34
+training accuracy: 0.52
+('Epoch', 65, ' ,    Loss Per Epoch: ', 4.739853568218984)
+Validation accuracy: 0.34
+training accuracy: 0.53
+('Epoch', 66, ' ,    Loss Per Epoch: ', 4.7323017791490765)
+Validation accuracy: 0.34
+training accuracy: 0.54
+('Epoch', 67, ' ,    Loss Per Epoch: ', 4.724769574417842)
+Validation accuracy: 0.34
+training accuracy: 0.54
+('Epoch', 68, ' ,    Loss Per Epoch: ', 4.717283335867924)
+Validation accuracy: 0.34
+training accuracy: 0.54
+('Epoch', 69, ' ,    Loss Per Epoch: ', 4.709819846437424)
+Validation accuracy: 0.34
+training accuracy: 0.54
+('Epoch', 70, ' ,    Loss Per Epoch: ', 4.702402627429633)
+Validation accuracy: 0.34
+training accuracy: 0.54
+('Epoch', 71, ' ,    Loss Per Epoch: ', 4.695028695189895)
+Validation accuracy: 0.34
+training accuracy: 0.55
+('Epoch', 72, ' ,    Loss Per Epoch: ', 4.687671388716059)
+Validation accuracy: 0.34
+training accuracy: 0.55
+('Epoch', 73, ' ,    Loss Per Epoch: ', 4.6803362694903985)
+Validation accuracy: 0.34
+training accuracy: 0.55
+('Epoch', 74, ' ,    Loss Per Epoch: ', 4.6730358102674545)
+Validation accuracy: 0.34
+training accuracy: 0.55
+('Epoch', 75, ' ,    Loss Per Epoch: ', 4.665777703975508)
+Validation accuracy: 0.34
+training accuracy: 0.56
+('Epoch', 76, ' ,    Loss Per Epoch: ', 4.658524079725175)
+Validation accuracy: 0.34
+training accuracy: 0.56
+('Epoch', 77, ' ,    Loss Per Epoch: ', 4.651289399347875)
+Validation accuracy: 0.34
+training accuracy: 0.56
+('Epoch', 78, ' ,    Loss Per Epoch: ', 4.644095841261919)
+Validation accuracy: 0.34
+training accuracy: 0.56
+('Epoch', 79, ' ,    Loss Per Epoch: ', 4.636935832348297)
+Validation accuracy: 0.34
+training accuracy: 0.56
+('Epoch', 80, ' ,    Loss Per Epoch: ', 4.6297890577733)
+Validation accuracy: 0.35
+training accuracy: 0.57
+('Epoch', 81, ' ,    Loss Per Epoch: ', 4.622666060839292)
+Validation accuracy: 0.35
+training accuracy: 0.58
+('Epoch', 82, ' ,    Loss Per Epoch: ', 4.615569486348616)
+Validation accuracy: 0.35
+training accuracy: 0.58
+('Epoch', 83, ' ,    Loss Per Epoch: ', 4.608482436718936)
+Validation accuracy: 0.35
+training accuracy: 0.59
+('Epoch', 84, ' ,    Loss Per Epoch: ', 4.601438371165465)
+Validation accuracy: 0.35
+training accuracy: 0.59
+('Epoch', 85, ' ,    Loss Per Epoch: ', 4.594409100460234)
+Validation accuracy: 0.35
+training accuracy: 0.60
+('Epoch', 86, ' ,    Loss Per Epoch: ', 4.587384493686461)
+Validation accuracy: 0.35
+training accuracy: 0.60
+('Epoch', 87, ' ,    Loss Per Epoch: ', 4.5803913662250215)
+Validation accuracy: 0.35
+training accuracy: 0.60
+('Epoch', 88, ' ,    Loss Per Epoch: ', 4.573423263101611)
+Validation accuracy: 0.35
+training accuracy: 0.61
+('Epoch', 89, ' ,    Loss Per Epoch: ', 4.5664762162285975)
+Validation accuracy: 0.35
+training accuracy: 0.61
+('Epoch', 90, ' ,    Loss Per Epoch: ', 4.55954870928134)
+Validation accuracy: 0.35
+training accuracy: 0.61
+('Epoch', 91, ' ,    Loss Per Epoch: ', 4.552617891685761)
+Validation accuracy: 0.35
+training accuracy: 0.61
+('Epoch', 92, ' ,    Loss Per Epoch: ', 4.545718215336172)
+Validation accuracy: 0.35
+training accuracy: 0.61
+('Epoch', 93, ' ,    Loss Per Epoch: ', 4.538836718258533)
+Validation accuracy: 0.35
+training accuracy: 0.61
+('Epoch', 94, ' ,    Loss Per Epoch: ', 4.531959429811217)
+Validation accuracy: 0.35
+training accuracy: 0.61
+('Epoch', 95, ' ,    Loss Per Epoch: ', 4.525115661096488)
+Validation accuracy: 0.35
+training accuracy: 0.61
+('Epoch', 96, ' ,    Loss Per Epoch: ', 4.518292343262554)
+Validation accuracy: 0.35
+training accuracy: 0.62
+('Epoch', 97, ' ,    Loss Per Epoch: ', 4.511483105290669)
+Validation accuracy: 0.35
+training accuracy: 0.62
+('Epoch', 98, ' ,    Loss Per Epoch: ', 4.50470375610572)
+Validation accuracy: 0.35
+training accuracy: 0.62
+('Epoch', 99, ' ,    Loss Per Epoch: ', 4.497945359144067)
+Validation accuracy: 0.35
+training accuracy: 0.62
+('Epoch', 100, ' ,    Loss Per Epoch: ', 4.491201819103945)
+Validation accuracy: 0.36
+training accuracy: 0.63
+('Epoch', 101, ' ,    Loss Per Epoch: ', 4.484481087700401)
+Validation accuracy: 0.36
+training accuracy: 0.63
+('Epoch', 102, ' ,    Loss Per Epoch: ', 4.477779241334408)
+Validation accuracy: 0.35
+training accuracy: 0.63
+('Epoch', 103, ' ,    Loss Per Epoch: ', 4.4711004758709745)
+Validation accuracy: 0.35
+training accuracy: 0.63
+('Epoch', 104, ' ,    Loss Per Epoch: ', 4.4644263715841515)
+Validation accuracy: 0.35
+training accuracy: 0.63
+('Epoch', 105, ' ,    Loss Per Epoch: ', 4.457783596026654)
+Validation accuracy: 0.35
+training accuracy: 0.64
+('Epoch', 106, ' ,    Loss Per Epoch: ', 4.4511583055676915)
+Validation accuracy: 0.35
+training accuracy: 0.64
+('Epoch', 107, ' ,    Loss Per Epoch: ', 4.444554990861545)
+Validation accuracy: 0.35
+training accuracy: 0.64
+('Epoch', 108, ' ,    Loss Per Epoch: ', 4.4379576297972285)
+Validation accuracy: 0.36
+training accuracy: 0.64
+('Epoch', 109, ' ,    Loss Per Epoch: ', 4.431399718716572)
+Validation accuracy: 0.36
+training accuracy: 0.65
+('Epoch', 110, ' ,    Loss Per Epoch: ', 4.424845792799313)
+Validation accuracy: 0.36
+training accuracy: 0.65
+('Epoch', 111, ' ,    Loss Per Epoch: ', 4.418305602155676)
+Validation accuracy: 0.36
+training accuracy: 0.66
+('Epoch', 112, ' ,    Loss Per Epoch: ', 4.411795869991707)
+Validation accuracy: 0.36
+training accuracy: 0.66
+('Epoch', 113, ' ,    Loss Per Epoch: ', 4.40528973464598)
+Validation accuracy: 0.36
+training accuracy: 0.66
+('Epoch', 114, ' ,    Loss Per Epoch: ', 4.398812816094081)
+Validation accuracy: 0.36
+training accuracy: 0.66
+('Epoch', 115, ' ,    Loss Per Epoch: ', 4.392338295724556)
+Validation accuracy: 0.36
+training accuracy: 0.66
+('Epoch', 116, ' ,    Loss Per Epoch: ', 4.385887310165617)
+Validation accuracy: 0.36
+training accuracy: 0.66
+('Epoch', 117, ' ,    Loss Per Epoch: ', 4.379447538015175)
+Validation accuracy: 0.36
+training accuracy: 0.66
+('Epoch', 118, ' ,    Loss Per Epoch: ', 4.3730341005067634)
+Validation accuracy: 0.36
+training accuracy: 0.67
+('Epoch', 119, ' ,    Loss Per Epoch: ', 4.366649168031026)
+Validation accuracy: 0.36
+training accuracy: 0.67
+('Epoch', 120, ' ,    Loss Per Epoch: ', 4.360276264270715)
+Validation accuracy: 0.36
+training accuracy: 0.67
+('Epoch', 121, ' ,    Loss Per Epoch: ', 4.353922174700064)
+Validation accuracy: 0.36
+training accuracy: 0.67
+('Epoch', 122, ' ,    Loss Per Epoch: ', 4.347585143002862)
+Validation accuracy: 0.36
+training accuracy: 0.68
+('Epoch', 123, ' ,    Loss Per Epoch: ', 4.341271736706952)
+Validation accuracy: 0.36
+training accuracy: 0.68
+('Epoch', 124, ' ,    Loss Per Epoch: ', 4.334964573192162)
+Validation accuracy: 0.36
+training accuracy: 0.68
+('Epoch', 125, ' ,    Loss Per Epoch: ', 4.32868045364193)
+Validation accuracy: 0.36
+training accuracy: 0.69
+('Epoch', 126, ' ,    Loss Per Epoch: ', 4.322414562008401)
+Validation accuracy: 0.36
+training accuracy: 0.69
+('Epoch', 127, ' ,    Loss Per Epoch: ', 4.316167584520788)
+Validation accuracy: 0.36
+training accuracy: 0.70
+('Epoch', 128, ' ,    Loss Per Epoch: ', 4.3099317663590755)
+Validation accuracy: 0.36
+training accuracy: 0.70
+('Epoch', 129, ' ,    Loss Per Epoch: ', 4.303731591855599)
+Validation accuracy: 0.36
+training accuracy: 0.70
+('Epoch', 130, ' ,    Loss Per Epoch: ', 4.297545138659166)
+Validation accuracy: 0.36
+training accuracy: 0.70
+('Epoch', 131, ' ,    Loss Per Epoch: ', 4.29137974348612)
+Validation accuracy: 0.36
+training accuracy: 0.70
+('Epoch', 132, ' ,    Loss Per Epoch: ', 4.285225118687397)
+Validation accuracy: 0.36
+training accuracy: 0.70
+('Epoch', 133, ' ,    Loss Per Epoch: ', 4.2790883886213145)
+Validation accuracy: 0.36
+training accuracy: 0.70
+('Epoch', 134, ' ,    Loss Per Epoch: ', 4.272977077885786)
+Validation accuracy: 0.36
+training accuracy: 0.70
+('Epoch', 135, ' ,    Loss Per Epoch: ', 4.266874106654304)
+Validation accuracy: 0.36
+training accuracy: 0.71
+('Epoch', 136, ' ,    Loss Per Epoch: ', 4.2607974703683)
+Validation accuracy: 0.36
+training accuracy: 0.71
+('Epoch', 137, ' ,    Loss Per Epoch: ', 4.254731932230665)
+Validation accuracy: 0.36
+training accuracy: 0.72
+('Epoch', 138, ' ,    Loss Per Epoch: ', 4.248690104738377)
+Validation accuracy: 0.36
+training accuracy: 0.72
+('Epoch', 139, ' ,    Loss Per Epoch: ', 4.242669220042993)
+Validation accuracy: 0.36
+training accuracy: 0.72
+('Epoch', 140, ' ,    Loss Per Epoch: ', 4.2366553619978085)
+Validation accuracy: 0.36
+training accuracy: 0.72
+('Epoch', 141, ' ,    Loss Per Epoch: ', 4.230666237193555)
+Validation accuracy: 0.36
+training accuracy: 0.72
+('Epoch', 142, ' ,    Loss Per Epoch: ', 4.2246869956324105)
+Validation accuracy: 0.36
+training accuracy: 0.72
+('Epoch', 143, ' ,    Loss Per Epoch: ', 4.218736388126706)
+Validation accuracy: 0.36
+training accuracy: 0.72
+('Epoch', 144, ' ,    Loss Per Epoch: ', 4.212807526636677)
+Validation accuracy: 0.36
+training accuracy: 0.72
+('Epoch', 145, ' ,    Loss Per Epoch: ', 4.206886371527919)
+Validation accuracy: 0.36
+training accuracy: 0.73
+('Epoch', 146, ' ,    Loss Per Epoch: ', 4.200983544532726)
+Validation accuracy: 0.36
+training accuracy: 0.73
+('Epoch', 147, ' ,    Loss Per Epoch: ', 4.195099584936254)
+Validation accuracy: 0.36
+training accuracy: 0.73
+('Epoch', 148, ' ,    Loss Per Epoch: ', 4.189236020290546)
+Validation accuracy: 0.36
+training accuracy: 0.74
+('Epoch', 149, ' ,    Loss Per Epoch: ', 4.183389309196561)
+Validation accuracy: 0.36
+training accuracy: 0.74
+('Epoch', 150, ' ,    Loss Per Epoch: ', 4.177568502859801)
+Validation accuracy: 0.36
+training accuracy: 0.74
+('Epoch', 151, ' ,    Loss Per Epoch: ', 4.171767084655612)
+Validation accuracy: 0.36
+training accuracy: 0.74
+('Epoch', 152, ' ,    Loss Per Epoch: ', 4.16598160808396)
+Validation accuracy: 0.36
+training accuracy: 0.74
+('Epoch', 153, ' ,    Loss Per Epoch: ', 4.160224937642261)
+Validation accuracy: 0.36
+training accuracy: 0.74
+('Epoch', 154, ' ,    Loss Per Epoch: ', 4.154486328481566)
+Validation accuracy: 0.36
+training accuracy: 0.74
+('Epoch', 155, ' ,    Loss Per Epoch: ', 4.14878317039606)
+Validation accuracy: 0.36
+training accuracy: 0.74
+('Epoch', 156, ' ,    Loss Per Epoch: ', 4.143087732307777)
+Validation accuracy: 0.36
+training accuracy: 0.75
+('Epoch', 157, ' ,    Loss Per Epoch: ', 4.137423619151156)
+Validation accuracy: 0.36
+training accuracy: 0.75
+('Epoch', 158, ' ,    Loss Per Epoch: ', 4.131780034645416)
+Validation accuracy: 0.36
+training accuracy: 0.75
+('Epoch', 159, ' ,    Loss Per Epoch: ', 4.126155470763806)
+Validation accuracy: 0.36
+training accuracy: 0.75
+('Epoch', 160, ' ,    Loss Per Epoch: ', 4.120556295064032)
+Validation accuracy: 0.36
+training accuracy: 0.75
+('Epoch', 161, ' ,    Loss Per Epoch: ', 4.11497653730627)
+Validation accuracy: 0.36
+training accuracy: 0.75
+('Epoch', 162, ' ,    Loss Per Epoch: ', 4.109406931788648)
+Validation accuracy: 0.36
+training accuracy: 0.75
+('Epoch', 163, ' ,    Loss Per Epoch: ', 4.103861935066538)
+Validation accuracy: 0.36
+training accuracy: 0.75
+('Epoch', 164, ' ,    Loss Per Epoch: ', 4.0983320847037055)
+Validation accuracy: 0.36
+training accuracy: 0.75
+('Epoch', 165, ' ,    Loss Per Epoch: ', 4.0928331334864705)
+Validation accuracy: 0.36
+training accuracy: 0.75
+('Epoch', 166, ' ,    Loss Per Epoch: ', 4.0873519338475575)
+Validation accuracy: 0.36
+training accuracy: 0.75
+('Epoch', 167, ' ,    Loss Per Epoch: ', 4.081894239565656)
+Validation accuracy: 0.36
+training accuracy: 0.75
+('Epoch', 168, ' ,    Loss Per Epoch: ', 4.076454736034563)
+Validation accuracy: 0.36
+training accuracy: 0.75
+('Epoch', 169, ' ,    Loss Per Epoch: ', 4.071039640057704)
+Validation accuracy: 0.36
+training accuracy: 0.75
+('Epoch', 170, ' ,    Loss Per Epoch: ', 4.0656454453431)
+Validation accuracy: 0.36
+training accuracy: 0.75
+('Epoch', 171, ' ,    Loss Per Epoch: ', 4.060273522857473)
+Validation accuracy: 0.36
+training accuracy: 0.76
+('Epoch', 172, ' ,    Loss Per Epoch: ', 4.054925084612668)
+Validation accuracy: 0.36
+training accuracy: 0.76
+('Epoch', 173, ' ,    Loss Per Epoch: ', 4.049600462636521)
+Validation accuracy: 0.36
+training accuracy: 0.77
+('Epoch', 174, ' ,    Loss Per Epoch: ', 4.044288808864492)
+Validation accuracy: 0.36
+training accuracy: 0.77
+('Epoch', 175, ' ,    Loss Per Epoch: ', 4.039005974505697)
+Validation accuracy: 0.36
+training accuracy: 0.77
+('Epoch', 176, ' ,    Loss Per Epoch: ', 4.033737712472924)
+Validation accuracy: 0.36
+training accuracy: 0.77
+('Epoch', 177, ' ,    Loss Per Epoch: ', 4.028501277797395)
+Validation accuracy: 0.36
+training accuracy: 0.78
+('Epoch', 178, ' ,    Loss Per Epoch: ', 4.023286346101188)
+Validation accuracy: 0.36
+training accuracy: 0.78
+('Epoch', 179, ' ,    Loss Per Epoch: ', 4.018100534306624)
+Validation accuracy: 0.36
+training accuracy: 0.78
+('Epoch', 180, ' ,    Loss Per Epoch: ', 4.012929062202354)
+Validation accuracy: 0.36
+training accuracy: 0.79
+('Epoch', 181, ' ,    Loss Per Epoch: ', 4.007786730894249)
+Validation accuracy: 0.36
+training accuracy: 0.79
+('Epoch', 182, ' ,    Loss Per Epoch: ', 4.002662845158858)
+Validation accuracy: 0.36
+training accuracy: 0.80
+('Epoch', 183, ' ,    Loss Per Epoch: ', 3.9975752364047854)
+Validation accuracy: 0.36
+training accuracy: 0.80
+('Epoch', 184, ' ,    Loss Per Epoch: ', 3.9924946589969514)
+Validation accuracy: 0.36
+training accuracy: 0.80
+('Epoch', 185, ' ,    Loss Per Epoch: ', 3.9874505086863996)
+Validation accuracy: 0.36
+training accuracy: 0.80
+('Epoch', 186, ' ,    Loss Per Epoch: ', 3.982432067946003)
+Validation accuracy: 0.36
+training accuracy: 0.80
+('Epoch', 187, ' ,    Loss Per Epoch: ', 3.977431580549353)
+Validation accuracy: 0.36
+training accuracy: 0.80
+('Epoch', 188, ' ,    Loss Per Epoch: ', 3.9724655067520405)
+Validation accuracy: 0.36
+training accuracy: 0.80
+('Epoch', 189, ' ,    Loss Per Epoch: ', 3.9675277103181803)
+Validation accuracy: 0.36
+training accuracy: 0.80
+('Epoch', 190, ' ,    Loss Per Epoch: ', 3.96260533694862)
+Validation accuracy: 0.36
+training accuracy: 0.80
+('Epoch', 191, ' ,    Loss Per Epoch: ', 3.9577016080445637)
+Validation accuracy: 0.36
+training accuracy: 0.80
+('Epoch', 192, ' ,    Loss Per Epoch: ', 3.9528345379431196)
+Validation accuracy: 0.36
+training accuracy: 0.81
+('Epoch', 193, ' ,    Loss Per Epoch: ', 3.9479890138829274)
+Validation accuracy: 0.36
+training accuracy: 0.81
+('Epoch', 194, ' ,    Loss Per Epoch: ', 3.9431668868919254)
+Validation accuracy: 0.36
+training accuracy: 0.81
+('Epoch', 195, ' ,    Loss Per Epoch: ', 3.9383609537758306)
+Validation accuracy: 0.36
+training accuracy: 0.81
+('Epoch', 196, ' ,    Loss Per Epoch: ', 3.9335746611480826)
+Validation accuracy: 0.36
+training accuracy: 0.81
+('Epoch', 197, ' ,    Loss Per Epoch: ', 3.92881932985517)
+Validation accuracy: 0.36
+training accuracy: 0.81
+('Epoch', 198, ' ,    Loss Per Epoch: ', 3.924097169361885)
+Validation accuracy: 0.36
+training accuracy: 0.82
+('Epoch', 199, ' ,    Loss Per Epoch: ', 3.9193940534576686)
+Validation accuracy: 0.36
+training accuracy: 0.82
+('Epoch', 200, ' ,    Loss Per Epoch: ', 3.9147160094188074)
+Validation accuracy: 0.36
+training accuracy: 0.82
+('Epoch', 201, ' ,    Loss Per Epoch: ', 3.9100690122360504)
+Validation accuracy: 0.36
+training accuracy: 0.82
+('Epoch', 202, ' ,    Loss Per Epoch: ', 3.905446642232104)
+Validation accuracy: 0.36
+training accuracy: 0.82
+('Epoch', 203, ' ,    Loss Per Epoch: ', 3.900846866915958)
+Validation accuracy: 0.36
+training accuracy: 0.82
+('Epoch', 204, ' ,    Loss Per Epoch: ', 3.8962643807300266)
+Validation accuracy: 0.36
+training accuracy: 0.82
+('Epoch', 205, ' ,    Loss Per Epoch: ', 3.891728734210216)
+Validation accuracy: 0.36
+training accuracy: 0.82
+('Epoch', 206, ' ,    Loss Per Epoch: ', 3.887212150223191)
+Validation accuracy: 0.36
+training accuracy: 0.83
+('Epoch', 207, ' ,    Loss Per Epoch: ', 3.8827178736973176)
+Validation accuracy: 0.36
+training accuracy: 0.83
+('Epoch', 208, ' ,    Loss Per Epoch: ', 3.878250370731023)
+Validation accuracy: 0.36
+training accuracy: 0.83
+('Epoch', 209, ' ,    Loss Per Epoch: ', 3.8737984968546675)
+Validation accuracy: 0.36
+training accuracy: 0.84
+('Epoch', 210, ' ,    Loss Per Epoch: ', 3.869390778431439)
+Validation accuracy: 0.36
+training accuracy: 0.84
+('Epoch', 211, ' ,    Loss Per Epoch: ', 3.8650043811417336)
+Validation accuracy: 0.36
+training accuracy: 0.84
+('Epoch', 212, ' ,    Loss Per Epoch: ', 3.8606357866907834)
+Validation accuracy: 0.36
+training accuracy: 0.84
+('Epoch', 213, ' ,    Loss Per Epoch: ', 3.856310251511247)
+Validation accuracy: 0.36
+training accuracy: 0.84
+('Epoch', 214, ' ,    Loss Per Epoch: ', 3.8520018568497596)
+Validation accuracy: 0.36
+training accuracy: 0.86
+('Epoch', 215, ' ,    Loss Per Epoch: ', 3.8477212499551876)
+Validation accuracy: 0.36
+training accuracy: 0.86
+('Epoch', 216, ' ,    Loss Per Epoch: ', 3.8434702670907255)
+Validation accuracy: 0.36
+training accuracy: 0.86
+('Epoch', 217, ' ,    Loss Per Epoch: ', 3.8392323305107743)
+Validation accuracy: 0.36
+training accuracy: 0.86
+('Epoch', 218, ' ,    Loss Per Epoch: ', 3.8350416714068305)
+Validation accuracy: 0.36
+training accuracy: 0.86
+('Epoch', 219, ' ,    Loss Per Epoch: ', 3.8308569249115227)
+Validation accuracy: 0.36
+training accuracy: 0.86
+('Epoch', 220, ' ,    Loss Per Epoch: ', 3.826714456130812)
+Validation accuracy: 0.36
+training accuracy: 0.86
+('Epoch', 221, ' ,    Loss Per Epoch: ', 3.8225857293079946)
+Validation accuracy: 0.36
+training accuracy: 0.87
+('Epoch', 222, ' ,    Loss Per Epoch: ', 3.8184981308600814)
+Validation accuracy: 0.36
+training accuracy: 0.87
+('Epoch', 223, ' ,    Loss Per Epoch: ', 3.814417093376762)
+Validation accuracy: 0.36
+training accuracy: 0.88
+('Epoch', 224, ' ,    Loss Per Epoch: ', 3.8103716913286223)
+Validation accuracy: 0.36
+training accuracy: 0.88
+('Epoch', 225, ' ,    Loss Per Epoch: ', 3.8063486122442307)
+Validation accuracy: 0.36
+training accuracy: 0.88
+('Epoch', 226, ' ,    Loss Per Epoch: ', 3.8023656545859126)
+Validation accuracy: 0.36
+training accuracy: 0.88
+('Epoch', 227, ' ,    Loss Per Epoch: ', 3.7983912176546792)
+Validation accuracy: 0.36
+training accuracy: 0.88
+('Epoch', 228, ' ,    Loss Per Epoch: ', 3.794454167028301)
+Validation accuracy: 0.36
+training accuracy: 0.88
+('Epoch', 229, ' ,    Loss Per Epoch: ', 3.7905462495784)
+Validation accuracy: 0.36
+training accuracy: 0.88
+('Epoch', 230, ' ,    Loss Per Epoch: ', 3.786665743898184)
+Validation accuracy: 0.36
+training accuracy: 0.88
+('Epoch', 231, ' ,    Loss Per Epoch: ', 3.78279842300699)
+Validation accuracy: 0.36
+training accuracy: 0.88
+('Epoch', 232, ' ,    Loss Per Epoch: ', 3.7789580825105284)
+Validation accuracy: 0.36
+training accuracy: 0.88
+('Epoch', 233, ' ,    Loss Per Epoch: ', 3.775156809378228)
+Validation accuracy: 0.36
+training accuracy: 0.88
+('Epoch', 234, ' ,    Loss Per Epoch: ', 3.771371861326967)
+Validation accuracy: 0.36
+training accuracy: 0.88
+('Epoch', 235, ' ,    Loss Per Epoch: ', 3.767623960009648)
+Validation accuracy: 0.36
+training accuracy: 0.88
+('Epoch', 236, ' ,    Loss Per Epoch: ', 3.763897983059826)
+Validation accuracy: 0.36
+training accuracy: 0.89
+('Epoch', 237, ' ,    Loss Per Epoch: ', 3.7601981803657756)
+Validation accuracy: 0.36
+training accuracy: 0.89
+('Epoch', 238, ' ,    Loss Per Epoch: ', 3.7565256749343074)
+Validation accuracy: 0.36
+training accuracy: 0.89
+('Epoch', 239, ' ,    Loss Per Epoch: ', 3.7528715337073266)
+Validation accuracy: 0.36
+training accuracy: 0.90
+('Epoch', 240, ' ,    Loss Per Epoch: ', 3.749249678203275)
+Validation accuracy: 0.36
+training accuracy: 0.90
+('Epoch', 241, ' ,    Loss Per Epoch: ', 3.7456588162054585)
+Validation accuracy: 0.36
+training accuracy: 0.90
+('Epoch', 242, ' ,    Loss Per Epoch: ', 3.742085820315969)
+Validation accuracy: 0.36
+training accuracy: 0.90
+('Epoch', 243, ' ,    Loss Per Epoch: ', 3.738549716341095)
+Validation accuracy: 0.35
+training accuracy: 0.90
+('Epoch', 244, ' ,    Loss Per Epoch: ', 3.7350305433994)
+Validation accuracy: 0.35
+training accuracy: 0.90
+('Epoch', 245, ' ,    Loss Per Epoch: ', 3.7315361330511556)
+Validation accuracy: 0.35
+training accuracy: 0.90
+('Epoch', 246, ' ,    Loss Per Epoch: ', 3.728072972958967)
+Validation accuracy: 0.35
+training accuracy: 0.90
+('Epoch', 247, ' ,    Loss Per Epoch: ', 3.7246322458355943)
+Validation accuracy: 0.35
+training accuracy: 0.90
+('Epoch', 248, ' ,    Loss Per Epoch: ', 3.7212134116669486)
+Validation accuracy: 0.35
+training accuracy: 0.90
+('Epoch', 249, ' ,    Loss Per Epoch: ', 3.717830507112407)
+Validation accuracy: 0.35
+training accuracy: 0.90
+('Epoch', 250, ' ,    Loss Per Epoch: ', 3.7144714214211993)
+Validation accuracy: 0.35
+training accuracy: 0.90
+('Epoch', 251, ' ,    Loss Per Epoch: ', 3.711139990176605)
+Validation accuracy: 0.35
+training accuracy: 0.90
+('Epoch', 252, ' ,    Loss Per Epoch: ', 3.7078253333894944)
+Validation accuracy: 0.35
+training accuracy: 0.90
+('Epoch', 253, ' ,    Loss Per Epoch: ', 3.704549532675966)
+Validation accuracy: 0.35
+training accuracy: 0.90
+('Epoch', 254, ' ,    Loss Per Epoch: ', 3.7012903654680667)
+Validation accuracy: 0.35
+training accuracy: 0.91
+('Epoch', 255, ' ,    Loss Per Epoch: ', 3.698051290478845)
+Validation accuracy: 0.35
+training accuracy: 0.91
+('Epoch', 256, ' ,    Loss Per Epoch: ', 3.694845053568273)
+Validation accuracy: 0.35
+training accuracy: 0.91
+('Epoch', 257, ' ,    Loss Per Epoch: ', 3.691664005375427)
+Validation accuracy: 0.35
+training accuracy: 0.91
+('Epoch', 258, ' ,    Loss Per Epoch: ', 3.6885015905783356)
+Validation accuracy: 0.35
+training accuracy: 0.91
+('Epoch', 259, ' ,    Loss Per Epoch: ', 3.6853733770583847)
+Validation accuracy: 0.35
+training accuracy: 0.91
+('Epoch', 260, ' ,    Loss Per Epoch: ', 3.682262025278333)
+Validation accuracy: 0.35
+training accuracy: 0.91
+('Epoch', 261, ' ,    Loss Per Epoch: ', 3.6791736427094204)
+Validation accuracy: 0.35
+training accuracy: 0.91
+('Epoch', 262, ' ,    Loss Per Epoch: ', 3.676115002372907)
+Validation accuracy: 0.35
+training accuracy: 0.91
+('Epoch', 263, ' ,    Loss Per Epoch: ', 3.6730811010126763)
+Validation accuracy: 0.35
+training accuracy: 0.92
+('Epoch', 264, ' ,    Loss Per Epoch: ', 3.670074035782451)
+Validation accuracy: 0.35
+training accuracy: 0.92
+('Epoch', 265, ' ,    Loss Per Epoch: ', 3.667087082278749)
+Validation accuracy: 0.35
+training accuracy: 0.92
+('Epoch', 266, ' ,    Loss Per Epoch: ', 3.6641236990969186)
+Validation accuracy: 0.35
+training accuracy: 0.92
+('Epoch', 267, ' ,    Loss Per Epoch: ', 3.661190436594928)
+Validation accuracy: 0.35
+training accuracy: 0.92
+('Epoch', 268, ' ,    Loss Per Epoch: ', 3.658282556371594)
+Validation accuracy: 0.35
+training accuracy: 0.92
+('Epoch', 269, ' ,    Loss Per Epoch: ', 3.6553963800229927)
+Validation accuracy: 0.35
+training accuracy: 0.92
+('Epoch', 270, ' ,    Loss Per Epoch: ', 3.6525342051864973)
+Validation accuracy: 0.35
+training accuracy: 0.92
+('Epoch', 271, ' ,    Loss Per Epoch: ', 3.649694348883636)
+Validation accuracy: 0.35
+training accuracy: 0.92
+('Epoch', 272, ' ,    Loss Per Epoch: ', 3.6468778431601367)
+Validation accuracy: 0.35
+training accuracy: 0.92
+('Epoch', 273, ' ,    Loss Per Epoch: ', 3.644087920285696)
+Validation accuracy: 0.35
+training accuracy: 0.92
+('Epoch', 274, ' ,    Loss Per Epoch: ', 3.6413177489926514)
+Validation accuracy: 0.35
+training accuracy: 0.93
+('Epoch', 275, ' ,    Loss Per Epoch: ', 3.6385834109904818)
+Validation accuracy: 0.35
+training accuracy: 0.93
+('Epoch', 276, ' ,    Loss Per Epoch: ', 3.6358558274545496)
+Validation accuracy: 0.35
+training accuracy: 0.93
+('Epoch', 277, ' ,    Loss Per Epoch: ', 3.6331616727758056)
+Validation accuracy: 0.35
+training accuracy: 0.93
+('Epoch', 278, ' ,    Loss Per Epoch: ', 3.6304871052285708)
+Validation accuracy: 0.35
+training accuracy: 0.93
+('Epoch', 279, ' ,    Loss Per Epoch: ', 3.6278326693501115)
+Validation accuracy: 0.35
+training accuracy: 0.93
+('Epoch', 280, ' ,    Loss Per Epoch: ', 3.625200976401746)
+Validation accuracy: 0.35
+training accuracy: 0.93
+('Epoch', 281, ' ,    Loss Per Epoch: ', 3.622598130831719)
+Validation accuracy: 0.35
+training accuracy: 0.93
+('Epoch', 282, ' ,    Loss Per Epoch: ', 3.6200173739556782)
+Validation accuracy: 0.35
+training accuracy: 0.94
+('Epoch', 283, ' ,    Loss Per Epoch: ', 3.6174603894076043)
+Validation accuracy: 0.35
+training accuracy: 0.94
+('Epoch', 284, ' ,    Loss Per Epoch: ', 3.6149298898071662)
+Validation accuracy: 0.35
+training accuracy: 0.94
+('Epoch', 285, ' ,    Loss Per Epoch: ', 3.61240657110719)
+Validation accuracy: 0.35
+training accuracy: 0.94
+('Epoch', 286, ' ,    Loss Per Epoch: ', 3.609921893857095)
+Validation accuracy: 0.35
+training accuracy: 0.94
+('Epoch', 287, ' ,    Loss Per Epoch: ', 3.60745331641412)
+Validation accuracy: 0.35
+training accuracy: 0.94
+('Epoch', 288, ' ,    Loss Per Epoch: ', 3.6050034454754436)
+Validation accuracy: 0.35
+training accuracy: 0.94
+('Epoch', 289, ' ,    Loss Per Epoch: ', 3.602579144802223)
+Validation accuracy: 0.35
+training accuracy: 0.94
+('Epoch', 290, ' ,    Loss Per Epoch: ', 3.6001783544454886)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 291, ' ,    Loss Per Epoch: ', 3.597806791397057)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 292, ' ,    Loss Per Epoch: ', 3.595448598981334)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 293, ' ,    Loss Per Epoch: ', 3.59312230165407)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 294, ' ,    Loss Per Epoch: ', 3.590807393860291)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 295, ' ,    Loss Per Epoch: ', 3.5885107077361122)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 296, ' ,    Loss Per Epoch: ', 3.586240789357264)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 297, ' ,    Loss Per Epoch: ', 3.5839877099581225)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 298, ' ,    Loss Per Epoch: ', 3.5817570942111057)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 299, ' ,    Loss Per Epoch: ', 3.5795443857558107)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 300, ' ,    Loss Per Epoch: ', 3.577354398667487)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 301, ' ,    Loss Per Epoch: ', 3.5751834177148916)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 302, ' ,    Loss Per Epoch: ', 3.573041167445126)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 303, ' ,    Loss Per Epoch: ', 3.5709085153894673)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 304, ' ,    Loss Per Epoch: ', 3.568802225952827)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 305, ' ,    Loss Per Epoch: ', 3.566707810898465)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 306, ' ,    Loss Per Epoch: ', 3.564637838003664)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 307, ' ,    Loss Per Epoch: ', 3.5625879339136532)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 308, ' ,    Loss Per Epoch: ', 3.5605588464867366)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 309, ' ,    Loss Per Epoch: ', 3.5585450884059355)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 310, ' ,    Loss Per Epoch: ', 3.556551541575582)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 311, ' ,    Loss Per Epoch: ', 3.554578030956873)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 312, ' ,    Loss Per Epoch: ', 3.552622325290662)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 313, ' ,    Loss Per Epoch: ', 3.5506832616428086)
+Validation accuracy: 0.35
+training accuracy: 0.95
+('Epoch', 314, ' ,    Loss Per Epoch: ', 3.5487672537295984)
+Validation accuracy: 0.35
+training accuracy: 0.96
+('Epoch', 315, ' ,    Loss Per Epoch: ', 3.5468666044020902)
+Validation accuracy: 0.35
+training accuracy: 0.96
+('Epoch', 316, ' ,    Loss Per Epoch: ', 3.5449873540016257)
+Validation accuracy: 0.35
+training accuracy: 0.96
+('Epoch', 317, ' ,    Loss Per Epoch: ', 3.543119415397538)
+Validation accuracy: 0.35
+training accuracy: 0.96
+('Epoch', 318, ' ,    Loss Per Epoch: ', 3.5412832941688706)
+Validation accuracy: 0.35
+training accuracy: 0.96
+('Epoch', 319, ' ,    Loss Per Epoch: ', 3.539458444666545)
+Validation accuracy: 0.35
+training accuracy: 0.96
+('Epoch', 320, ' ,    Loss Per Epoch: ', 3.537645728926997)
+Validation accuracy: 0.35
+training accuracy: 0.96
+('Epoch', 321, ' ,    Loss Per Epoch: ', 3.535853999819142)
+Validation accuracy: 0.35
+training accuracy: 0.96
+('Epoch', 322, ' ,    Loss Per Epoch: ', 3.5340800491465587)
+Validation accuracy: 0.35
+training accuracy: 0.96
+('Epoch', 323, ' ,    Loss Per Epoch: ', 3.5323221586289324)
+Validation accuracy: 0.35
+training accuracy: 0.96
+('Epoch', 324, ' ,    Loss Per Epoch: ', 3.5305878103460078)
+Validation accuracy: 0.35
+training accuracy: 0.96
+('Epoch', 325, ' ,    Loss Per Epoch: ', 3.5288677779422497)
+Validation accuracy: 0.35
+training accuracy: 0.96
+('Epoch', 326, ' ,    Loss Per Epoch: ', 3.5271675491593304)
+Validation accuracy: 0.35
+training accuracy: 0.96
+('Epoch', 327, ' ,    Loss Per Epoch: ', 3.5254893747753)
+Validation accuracy: 0.35
+training accuracy: 0.96
+('Epoch', 328, ' ,    Loss Per Epoch: ', 3.5238162063700282)
+Validation accuracy: 0.35
+training accuracy: 0.96
+('Epoch', 329, ' ,    Loss Per Epoch: ', 3.522167278516215)
+Validation accuracy: 0.35
+training accuracy: 0.96
+('Epoch', 330, ' ,    Loss Per Epoch: ', 3.520533267809484)
+Validation accuracy: 0.35
+training accuracy: 0.96
+('Epoch', 331, ' ,    Loss Per Epoch: ', 3.5189155021731007)
+Validation accuracy: 0.35
+training accuracy: 0.96
+('Epoch', 332, ' ,    Loss Per Epoch: ', 3.5173158732513023)
+Validation accuracy: 0.35
+training accuracy: 0.96
+('Epoch', 333, ' ,    Loss Per Epoch: ', 3.515728746421129)
+Validation accuracy: 0.35
+training accuracy: 0.97
+('Epoch', 334, ' ,    Loss Per Epoch: ', 3.514156858567224)
+Validation accuracy: 0.35
+training accuracy: 0.97
+('Epoch', 335, ' ,    Loss Per Epoch: ', 3.5126060119293707)
+Validation accuracy: 0.35
+training accuracy: 0.97
+('Epoch', 336, ' ,    Loss Per Epoch: ', 3.511065151765081)
+Validation accuracy: 0.35
+training accuracy: 0.97
+('Epoch', 337, ' ,    Loss Per Epoch: ', 3.5095433539262855)
+Validation accuracy: 0.35
+training accuracy: 0.97
+('Epoch', 338, ' ,    Loss Per Epoch: ', 3.5080389411616912)
+Validation accuracy: 0.35
+training accuracy: 0.97
+('Epoch', 339, ' ,    Loss Per Epoch: ', 3.5065502114679292)
+Validation accuracy: 0.35
+training accuracy: 0.97
+('Epoch', 340, ' ,    Loss Per Epoch: ', 3.5050764998009445)
+Validation accuracy: 0.35
+training accuracy: 0.97
+('Epoch', 341, ' ,    Loss Per Epoch: ', 3.5036150512875066)
+Validation accuracy: 0.35
+training accuracy: 0.97
+('Epoch', 342, ' ,    Loss Per Epoch: ', 3.502165468320925)
+Validation accuracy: 0.35
+training accuracy: 0.97
+('Epoch', 343, ' ,    Loss Per Epoch: ', 3.5007401259414825)
+Validation accuracy: 0.35
+training accuracy: 0.97
+('Epoch', 344, ' ,    Loss Per Epoch: ', 3.4993217015345137)
+Validation accuracy: 0.35
+training accuracy: 0.97
+('Epoch', 345, ' ,    Loss Per Epoch: ', 3.49791692077819)
+Validation accuracy: 0.35
+training accuracy: 0.97
+('Epoch', 346, ' ,    Loss Per Epoch: ', 3.496531256954125)
+Validation accuracy: 0.35
+training accuracy: 0.97
+('Epoch', 347, ' ,    Loss Per Epoch: ', 3.4951610427338378)
+Validation accuracy: 0.35
+training accuracy: 0.97
+('Epoch', 348, ' ,    Loss Per Epoch: ', 3.4938030414476904)
+Validation accuracy: 0.35
+training accuracy: 0.97
+('Epoch', 349, ' ,    Loss Per Epoch: ', 3.492449313147681)
+Validation accuracy: 0.35
+training accuracy: 0.97
+('Epoch', 350, ' ,    Loss Per Epoch: ', 3.4911251128889362)
+Validation accuracy: 0.35
+training accuracy: 0.97
+('Epoch', 351, ' ,    Loss Per Epoch: ', 3.4898077977380533)
+Validation accuracy: 0.35
+training accuracy: 0.97
+('Epoch', 352, ' ,    Loss Per Epoch: ', 3.4885076171991)
+Validation accuracy: 0.35
+training accuracy: 0.98
+('Epoch', 353, ' ,    Loss Per Epoch: ', 3.487216805544242)
+Validation accuracy: 0.35
+training accuracy: 0.98
+('Epoch', 354, ' ,    Loss Per Epoch: ', 3.4859400487405194)
+Validation accuracy: 0.35
+training accuracy: 0.98
+('Epoch', 355, ' ,    Loss Per Epoch: ', 3.484669277887117)
+Validation accuracy: 0.35
+training accuracy: 0.98
+('Epoch', 356, ' ,    Loss Per Epoch: ', 3.4834220324073395)
+Validation accuracy: 0.35
+training accuracy: 0.98
+('Epoch', 357, ' ,    Loss Per Epoch: ', 3.4821856757506)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 358, ' ,    Loss Per Epoch: ', 3.4809573167868737)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 359, ' ,    Loss Per Epoch: ', 3.4797458951707174)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 360, ' ,    Loss Per Epoch: ', 3.4785446568115925)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 361, ' ,    Loss Per Epoch: ', 3.4773605653616553)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 362, ' ,    Loss Per Epoch: ', 3.4761881079286443)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 363, ' ,    Loss Per Epoch: ', 3.4750290080487196)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 364, ' ,    Loss Per Epoch: ', 3.4738768426928064)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 365, ' ,    Loss Per Epoch: ', 3.472740458704518)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 366, ' ,    Loss Per Epoch: ', 3.471621073624683)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 367, ' ,    Loss Per Epoch: ', 3.4705095211010097)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 368, ' ,    Loss Per Epoch: ', 3.469410827472826)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 369, ' ,    Loss Per Epoch: ', 3.4683220326897835)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 370, ' ,    Loss Per Epoch: ', 3.467244310149372)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 371, ' ,    Loss Per Epoch: ', 3.4661841722097733)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 372, ' ,    Loss Per Epoch: ', 3.465127531778685)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 373, ' ,    Loss Per Epoch: ', 3.4640865647501187)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 374, ' ,    Loss Per Epoch: ', 3.463053778421662)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 375, ' ,    Loss Per Epoch: ', 3.4620381954438733)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 376, ' ,    Loss Per Epoch: ', 3.4610297571959117)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 377, ' ,    Loss Per Epoch: ', 3.46003399847305)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 378, ' ,    Loss Per Epoch: ', 3.4590515135872986)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 379, ' ,    Loss Per Epoch: ', 3.458077053411922)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 380, ' ,    Loss Per Epoch: ', 3.457110259031271)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 381, ' ,    Loss Per Epoch: ', 3.4561599837274537)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 382, ' ,    Loss Per Epoch: ', 3.45521782714385)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 383, ' ,    Loss Per Epoch: ', 3.4542858513728563)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 384, ' ,    Loss Per Epoch: ', 3.4533667338413956)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 385, ' ,    Loss Per Epoch: ', 3.4524536960816943)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 386, ' ,    Loss Per Epoch: ', 3.45155706696763)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 387, ' ,    Loss Per Epoch: ', 3.45066272294594)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 388, ' ,    Loss Per Epoch: ', 3.4497864154500886)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 389, ' ,    Loss Per Epoch: ', 3.448914851514013)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 390, ' ,    Loss Per Epoch: ', 3.448050885584603)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 391, ' ,    Loss Per Epoch: ', 3.4472017515662357)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 392, ' ,    Loss Per Epoch: ', 3.446361339403613)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 393, ' ,    Loss Per Epoch: ', 3.445525385162395)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 394, ' ,    Loss Per Epoch: ', 3.44470566451771)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 395, ' ,    Loss Per Epoch: ', 3.4438924747092154)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 396, ' ,    Loss Per Epoch: ', 3.4430849439015017)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 397, ' ,    Loss Per Epoch: ', 3.4422899156935753)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 398, ' ,    Loss Per Epoch: ', 3.441504091153461)
+Validation accuracy: 0.35
+training accuracy: 0.99
+('Epoch', 399, ' ,    Loss Per Epoch: ', 3.440727419546679)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 400, ' ,    Loss Per Epoch: ', 3.439958468449181)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 401, ' ,    Loss Per Epoch: ', 3.4391935735308437)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 402, ' ,    Loss Per Epoch: ', 3.4384432540285537)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 403, ' ,    Loss Per Epoch: ', 3.437700075997751)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 404, ' ,    Loss Per Epoch: ', 3.436966829960763)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 405, ' ,    Loss Per Epoch: ', 3.4362377360791867)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 406, ' ,    Loss Per Epoch: ', 3.435520334287713)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 407, ' ,    Loss Per Epoch: ', 3.4348132871984873)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 408, ' ,    Loss Per Epoch: ', 3.4341084617345725)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 409, ' ,    Loss Per Epoch: ', 3.4334178543339218)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 410, ' ,    Loss Per Epoch: ', 3.4327279778786877)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 411, ' ,    Loss Per Epoch: ', 3.4320507678770165)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 412, ' ,    Loss Per Epoch: ', 3.4313843775157955)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 413, ' ,    Loss Per Epoch: ', 3.4307202171066695)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 414, ' ,    Loss Per Epoch: ', 3.4300674941494944)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 415, ' ,    Loss Per Epoch: ', 3.4294216851228114)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 416, ' ,    Loss Per Epoch: ', 3.4287830827895256)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 417, ' ,    Loss Per Epoch: ', 3.428146017454935)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 418, ' ,    Loss Per Epoch: ', 3.427525678523625)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 419, ' ,    Loss Per Epoch: ', 3.426912026598654)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 420, ' ,    Loss Per Epoch: ', 3.4263007329306516)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 421, ' ,    Loss Per Epoch: ', 3.425699861176946)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 422, ' ,    Loss Per Epoch: ', 3.425104772635047)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 423, ' ,    Loss Per Epoch: ', 3.4245191145934406)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 424, ' ,    Loss Per Epoch: ', 3.4239364677024153)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 425, ' ,    Loss Per Epoch: ', 3.4233584059818862)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 426, ' ,    Loss Per Epoch: ', 3.422790758866669)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 427, ' ,    Loss Per Epoch: ', 3.42223162139181)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 428, ' ,    Loss Per Epoch: ', 3.4216754098049877)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 429, ' ,    Loss Per Epoch: ', 3.4211289299463896)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 430, ' ,    Loss Per Epoch: ', 3.420589730114949)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 431, ' ,    Loss Per Epoch: ', 3.4200536328436155)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 432, ' ,    Loss Per Epoch: ', 3.4195263265272104)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 433, ' ,    Loss Per Epoch: ', 3.4190037592965563)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 434, ' ,    Loss Per Epoch: ', 3.4184888170324044)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 435, ' ,    Loss Per Epoch: ', 3.4179779322002584)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 436, ' ,    Loss Per Epoch: ', 3.4174746705512486)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 437, ' ,    Loss Per Epoch: ', 3.4169733809225398)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 438, ' ,    Loss Per Epoch: ', 3.4164828072683346)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 439, ' ,    Loss Per Epoch: ', 3.4159986104348774)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 440, ' ,    Loss Per Epoch: ', 3.415516752485655)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 441, ' ,    Loss Per Epoch: ', 3.4150410671789246)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 442, ' ,    Loss Per Epoch: ', 3.4145733829507843)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 443, ' ,    Loss Per Epoch: ', 3.414109507999349)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 444, ' ,    Loss Per Epoch: ', 3.413650108564384)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 445, ' ,    Loss Per Epoch: ', 3.4131973534640943)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 446, ' ,    Loss Per Epoch: ', 3.412750173884101)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 447, ' ,    Loss Per Epoch: ', 3.4123075223776915)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 448, ' ,    Loss Per Epoch: ', 3.4118722497009197)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 449, ' ,    Loss Per Epoch: ', 3.4114409150173945)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 450, ' ,    Loss Per Epoch: ', 3.411013410397512)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 451, ' ,    Loss Per Epoch: ', 3.4105936276498787)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 452, ' ,    Loss Per Epoch: ', 3.410177675352834)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 453, ' ,    Loss Per Epoch: ', 3.4097688065798857)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 454, ' ,    Loss Per Epoch: ', 3.4093637363708322)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 455, ' ,    Loss Per Epoch: ', 3.4089634134268962)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 456, ' ,    Loss Per Epoch: ', 3.4085654585440204)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 457, ' ,    Loss Per Epoch: ', 3.4081756156130925)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 458, ' ,    Loss Per Epoch: ', 3.4077899570093826)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 459, ' ,    Loss Per Epoch: ', 3.407406798541277)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 460, ' ,    Loss Per Epoch: ', 3.4070316693824667)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 461, ' ,    Loss Per Epoch: ', 3.4066601592240917)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 462, ' ,    Loss Per Epoch: ', 3.406292173321906)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 463, ' ,    Loss Per Epoch: ', 3.405930637817683)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 464, ' ,    Loss Per Epoch: ', 3.405570500566556)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 465, ' ,    Loss Per Epoch: ', 3.4052185641410655)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 466, ' ,    Loss Per Epoch: ', 3.4048683227368346)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 467, ' ,    Loss Per Epoch: ', 3.404522647542378)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 468, ' ,    Loss Per Epoch: ', 3.4041821291593974)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 469, ' ,    Loss Per Epoch: ', 3.403845249156747)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 470, ' ,    Loss Per Epoch: ', 3.403513068108282)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 471, ' ,    Loss Per Epoch: ', 3.4031843202788115)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 472, ' ,    Loss Per Epoch: ', 3.4028580886998214)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 473, ' ,    Loss Per Epoch: ', 3.402540373340227)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 474, ' ,    Loss Per Epoch: ', 3.4022223863653176)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 475, ' ,    Loss Per Epoch: ', 3.4019101434638674)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 476, ' ,    Loss Per Epoch: ', 3.4016021887565397)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 477, ' ,    Loss Per Epoch: ', 3.401295656106796)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 478, ' ,    Loss Per Epoch: ', 3.4009948231008322)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 479, ' ,    Loss Per Epoch: ', 3.4006963617609345)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 480, ' ,    Loss Per Epoch: ', 3.4004033226641504)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 481, ' ,    Loss Per Epoch: ', 3.4001147022194256)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 482, ' ,    Loss Per Epoch: ', 3.3998276814569315)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 483, ' ,    Loss Per Epoch: ', 3.3995466641444376)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 484, ' ,    Loss Per Epoch: ', 3.3992655543670955)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 485, ' ,    Loss Per Epoch: ', 3.3989943112430185)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 486, ' ,    Loss Per Epoch: ', 3.3987211566364457)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 487, ' ,    Loss Per Epoch: ', 3.3984536127555156)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 488, ' ,    Loss Per Epoch: ', 3.3981881090515427)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 489, ' ,    Loss Per Epoch: ', 3.3979276759571975)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 490, ' ,    Loss Per Epoch: ', 3.3976681287214525)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 491, ' ,    Loss Per Epoch: ', 3.3974155308139653)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 492, ' ,    Loss Per Epoch: ', 3.3971642943325233)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 493, ' ,    Loss Per Epoch: ', 3.3969154438988767)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 494, ' ,    Loss Per Epoch: ', 3.3966698357467022)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 495, ' ,    Loss Per Epoch: ', 3.3964296433686862)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 496, ' ,    Loss Per Epoch: ', 3.3961917162160105)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 497, ' ,    Loss Per Epoch: ', 3.395956056453198)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 498, ' ,    Loss Per Epoch: ', 3.395723516071996)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 499, ' ,    Loss Per Epoch: ', 3.3954921780479785)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 500, ' ,    Loss Per Epoch: ', 3.3952703183155224)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 501, ' ,    Loss Per Epoch: ', 3.3950455078845914)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 502, ' ,    Loss Per Epoch: ', 3.3948232174427155)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 503, ' ,    Loss Per Epoch: ', 3.394606320070002)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 504, ' ,    Loss Per Epoch: ', 3.3943932281088993)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 505, ' ,    Loss Per Epoch: ', 3.394183361914852)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 506, ' ,    Loss Per Epoch: ', 3.393972952140707)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 507, ' ,    Loss Per Epoch: ', 3.3937687465703856)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 508, ' ,    Loss Per Epoch: ', 3.393563304914986)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 509, ' ,    Loss Per Epoch: ', 3.3933663501738525)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 510, ' ,    Loss Per Epoch: ', 3.393166532638478)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 511, ' ,    Loss Per Epoch: ', 3.392974336784388)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 512, ' ,    Loss Per Epoch: ', 3.3927813612109605)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 513, ' ,    Loss Per Epoch: ', 3.3925912448891005)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 514, ' ,    Loss Per Epoch: ', 3.3924038936789933)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 515, ' ,    Loss Per Epoch: ', 3.392219806562605)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 516, ' ,    Loss Per Epoch: ', 3.392037742833851)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 517, ' ,    Loss Per Epoch: ', 3.391857749451636)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 518, ' ,    Loss Per Epoch: ', 3.3916813642785906)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 519, ' ,    Loss Per Epoch: ', 3.3915058883769476)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 520, ' ,    Loss Per Epoch: ', 3.391332044201928)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 521, ' ,    Loss Per Epoch: ', 3.3911647699059926)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 522, ' ,    Loss Per Epoch: ', 3.3909942896467147)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 523, ' ,    Loss Per Epoch: ', 3.390829698427938)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 524, ' ,    Loss Per Epoch: ', 3.3906671145927385)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 525, ' ,    Loss Per Epoch: ', 3.3905068977923114)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 526, ' ,    Loss Per Epoch: ', 3.390349207150557)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 527, ' ,    Loss Per Epoch: ', 3.3901920528073046)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 528, ' ,    Loss Per Epoch: ', 3.390038666833116)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 529, ' ,    Loss Per Epoch: ', 3.389886810925598)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 530, ' ,    Loss Per Epoch: ', 3.389736115445884)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 531, ' ,    Loss Per Epoch: ', 3.389590653181497)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 532, ' ,    Loss Per Epoch: ', 3.38944454612634)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 533, ' ,    Loss Per Epoch: ', 3.3892993808954097)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 534, ' ,    Loss Per Epoch: ', 3.3891584284531744)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 535, ' ,    Loss Per Epoch: ', 3.3890218627158393)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 536, ' ,    Loss Per Epoch: ', 3.388882540918517)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 537, ' ,    Loss Per Epoch: ', 3.388747789263609)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 538, ' ,    Loss Per Epoch: ', 3.3886153769437284)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 539, ' ,    Loss Per Epoch: ', 3.3884846250618352)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 540, ' ,    Loss Per Epoch: ', 3.3883551263253073)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 541, ' ,    Loss Per Epoch: ', 3.3882252542884146)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 542, ' ,    Loss Per Epoch: ', 3.388100486917208)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 543, ' ,    Loss Per Epoch: ', 3.3879762866247316)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 544, ' ,    Loss Per Epoch: ', 3.387854469983936)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 545, ' ,    Loss Per Epoch: ', 3.387735861606178)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 546, ' ,    Loss Per Epoch: ', 3.3876166120878497)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 547, ' ,    Loss Per Epoch: ', 3.387501164735337)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 548, ' ,    Loss Per Epoch: ', 3.3873858024654306)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 549, ' ,    Loss Per Epoch: ', 3.387273176892617)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 550, ' ,    Loss Per Epoch: ', 3.387162103410217)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 551, ' ,    Loss Per Epoch: ', 3.3870522343905995)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 552, ' ,    Loss Per Epoch: ', 3.386944640277226)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 553, ' ,    Loss Per Epoch: ', 3.3868393977566233)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 554, ' ,    Loss Per Epoch: ', 3.386732145131159)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 555, ' ,    Loss Per Epoch: ', 3.3866329821379644)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 556, ' ,    Loss Per Epoch: ', 3.386530335814888)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 557, ' ,    Loss Per Epoch: ', 3.386431222612515)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 558, ' ,    Loss Per Epoch: ', 3.386331758246711)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 559, ' ,    Loss Per Epoch: ', 3.386235257691819)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 560, ' ,    Loss Per Epoch: ', 3.386140877092067)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 561, ' ,    Loss Per Epoch: ', 3.3860483372812076)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 562, ' ,    Loss Per Epoch: ', 3.3859566459925348)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 563, ' ,    Loss Per Epoch: ', 3.385864034028477)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 564, ' ,    Loss Per Epoch: ', 3.3857773509325706)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 565, ' ,    Loss Per Epoch: ', 3.385689084070073)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 566, ' ,    Loss Per Epoch: ', 3.3856019828642037)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 567, ' ,    Loss Per Epoch: ', 3.38551729038844)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 568, ' ,    Loss Per Epoch: ', 3.3854351129105464)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 569, ' ,    Loss Per Epoch: ', 3.3853514250053647)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 570, ' ,    Loss Per Epoch: ', 3.3852746081351848)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 571, ' ,    Loss Per Epoch: ', 3.385195405971092)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 572, ' ,    Loss Per Epoch: ', 3.3851167818572536)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 573, ' ,    Loss Per Epoch: ', 3.385041260064114)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 574, ' ,    Loss Per Epoch: ', 3.3849658746058933)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 575, ' ,    Loss Per Epoch: ', 3.3848925235505525)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 576, ' ,    Loss Per Epoch: ', 3.384820828356018)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 577, ' ,    Loss Per Epoch: ', 3.3847484792693003)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 578, ' ,    Loss Per Epoch: ', 3.3846786779753213)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 579, ' ,    Loss Per Epoch: ', 3.384610624221682)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 580, ' ,    Loss Per Epoch: ', 3.3845420037478973)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 581, ' ,    Loss Per Epoch: ', 3.3844768490537334)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 582, ' ,    Loss Per Epoch: ', 3.3844120851113177)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 583, ' ,    Loss Per Epoch: ', 3.384349690796747)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 584, ' ,    Loss Per Epoch: ', 3.3842883744016823)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 585, ' ,    Loss Per Epoch: ', 3.384226221384903)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 586, ' ,    Loss Per Epoch: ', 3.3841657306349986)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 587, ' ,    Loss Per Epoch: ', 3.3841070497427483)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 588, ' ,    Loss Per Epoch: ', 3.3840494126939653)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 589, ' ,    Loss Per Epoch: ', 3.3839943334951035)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 590, ' ,    Loss Per Epoch: ', 3.383937125157922)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 591, ' ,    Loss Per Epoch: ', 3.3838845804633295)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 592, ' ,    Loss Per Epoch: ', 3.3838310888926344)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 593, ' ,    Loss Per Epoch: ', 3.383778546814782)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 594, ' ,    Loss Per Epoch: ', 3.3837266651116487)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 595, ' ,    Loss Per Epoch: ', 3.3836780459013847)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 596, ' ,    Loss Per Epoch: ', 3.3836289281631653)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 597, ' ,    Loss Per Epoch: ', 3.3835808770880247)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 598, ' ,    Loss Per Epoch: ', 3.383535032010052)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 599, ' ,    Loss Per Epoch: ', 3.3834888810234647)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 600, ' ,    Loss Per Epoch: ', 3.383443824589182)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 601, ' ,    Loss Per Epoch: ', 3.383400038333064)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 602, ' ,    Loss Per Epoch: ', 3.383357638148261)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 603, ' ,    Loss Per Epoch: ', 3.383315638007556)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 604, ' ,    Loss Per Epoch: ', 3.383275435381174)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 605, ' ,    Loss Per Epoch: ', 3.383235917114074)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 606, ' ,    Loss Per Epoch: ', 3.383196096485594)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 607, ' ,    Loss Per Epoch: ', 3.3831568806865175)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 608, ' ,    Loss Per Epoch: ', 3.38312051240142)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 609, ' ,    Loss Per Epoch: ', 3.383084416571561)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 610, ' ,    Loss Per Epoch: ', 3.3830500798496406)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 611, ' ,    Loss Per Epoch: ', 3.3830149834302574)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 612, ' ,    Loss Per Epoch: ', 3.3829808277712403)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 613, ' ,    Loss Per Epoch: ', 3.3829486378363685)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 614, ' ,    Loss Per Epoch: ', 3.3829188980958853)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 615, ' ,    Loss Per Epoch: ', 3.3828869551776926)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 616, ' ,    Loss Per Epoch: ', 3.3828561608432484)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 617, ' ,    Loss Per Epoch: ', 3.3828275638220417)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 618, ' ,    Loss Per Epoch: ', 3.3827978837282524)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 619, ' ,    Loss Per Epoch: ', 3.3827720474923066)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 620, ' ,    Loss Per Epoch: ', 3.3827444075654367)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 621, ' ,    Loss Per Epoch: ', 3.3827183098774904)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 622, ' ,    Loss Per Epoch: ', 3.3826925726778803)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 623, ' ,    Loss Per Epoch: ', 3.3826696344797242)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 624, ' ,    Loss Per Epoch: ', 3.3826452887919256)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 625, ' ,    Loss Per Epoch: ', 3.3826219088274216)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 626, ' ,    Loss Per Epoch: ', 3.3826009004472875)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 627, ' ,    Loss Per Epoch: ', 3.3825786827391275)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 628, ' ,    Loss Per Epoch: ', 3.382558713291995)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 629, ' ,    Loss Per Epoch: ', 3.3825384731175907)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 630, ' ,    Loss Per Epoch: ', 3.3825202008704425)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 631, ' ,    Loss Per Epoch: ', 3.382501563306051)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 632, ' ,    Loss Per Epoch: ', 3.3824844304482133)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 633, ' ,    Loss Per Epoch: ', 3.3824669408526242)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 634, ' ,    Loss Per Epoch: ', 3.3824511584741415)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 635, ' ,    Loss Per Epoch: ', 3.3824354422274783)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 636, ' ,    Loss Per Epoch: ', 3.382420738632054)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 637, ' ,    Loss Per Epoch: ', 3.3824057625877995)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 638, ' ,    Loss Per Epoch: ', 3.3823925519636964)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 639, ' ,    Loss Per Epoch: ', 3.3823806396598743)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 640, ' ,    Loss Per Epoch: ', 3.3823675012364096)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 641, ' ,    Loss Per Epoch: ', 3.382357057636857)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 642, ' ,    Loss Per Epoch: ', 3.3823452584829683)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 643, ' ,    Loss Per Epoch: ', 3.382335033996826)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 644, ' ,    Loss Per Epoch: ', 3.3823257424563646)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 645, ' ,    Loss Per Epoch: ', 3.382317270750584)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 646, ' ,    Loss Per Epoch: ', 3.382307876431677)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 647, ' ,    Loss Per Epoch: ', 3.3822997767190817)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 648, ' ,    Loss Per Epoch: ', 3.382293642480902)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 649, ' ,    Loss Per Epoch: ', 3.382287132692023)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 650, ' ,    Loss Per Epoch: ', 3.3822810986813536)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 651, ' ,    Loss Per Epoch: ', 3.3822762572305507)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 652, ' ,    Loss Per Epoch: ', 3.3822714168784875)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 653, ' ,    Loss Per Epoch: ', 3.3822670251581437)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 654, ' ,    Loss Per Epoch: ', 3.382263554721768)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 655, ' ,    Loss Per Epoch: ', 3.3822597390242892)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 656, ' ,    Loss Per Epoch: ', 3.3822580787877095)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 657, ' ,    Loss Per Epoch: ', 3.382256428397068)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 658, ' ,    Loss Per Epoch: ', 3.38225528076607)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 659, ' ,    Loss Per Epoch: ', 3.3822544455372148)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 660, ' ,    Loss Per Epoch: ', 3.38225376088705)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 661, ' ,    Loss Per Epoch: ', 3.382253908958322)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 662, ' ,    Loss Per Epoch: ', 3.382255782941968)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 663, ' ,    Loss Per Epoch: ', 3.3822559916653483)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 664, ' ,    Loss Per Epoch: ', 3.382258639059313)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 665, ' ,    Loss Per Epoch: ', 3.3822604620737726)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 666, ' ,    Loss Per Epoch: ', 3.382263124604976)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 667, ' ,    Loss Per Epoch: ', 3.3822671626737804)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 668, ' ,    Loss Per Epoch: ', 3.382271996169748)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 669, ' ,    Loss Per Epoch: ', 3.3822748698833207)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 670, ' ,    Loss Per Epoch: ', 3.3822798026004968)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 671, ' ,    Loss Per Epoch: ', 3.38228577739303)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 672, ' ,    Loss Per Epoch: ', 3.3822918903771084)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 673, ' ,    Loss Per Epoch: ', 3.3822983750562137)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 674, ' ,    Loss Per Epoch: ', 3.382304727616219)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 675, ' ,    Loss Per Epoch: ', 3.3823117993986083)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 676, ' ,    Loss Per Epoch: ', 3.382319334566963)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 677, ' ,    Loss Per Epoch: ', 3.382327580844571)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 678, ' ,    Loss Per Epoch: ', 3.382335875816954)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 679, ' ,    Loss Per Epoch: ', 3.3823449253004916)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 680, ' ,    Loss Per Epoch: ', 3.38235455838041)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 681, ' ,    Loss Per Epoch: ', 3.382364874595734)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 682, ' ,    Loss Per Epoch: ', 3.3823739371752244)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 683, ' ,    Loss Per Epoch: ', 3.382385656550069)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 684, ' ,    Loss Per Epoch: ', 3.382396805904962)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 685, ' ,    Loss Per Epoch: ', 3.3824074383490594)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 686, ' ,    Loss Per Epoch: ', 3.38242057715826)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 687, ' ,    Loss Per Epoch: ', 3.3824332309989713)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 688, ' ,    Loss Per Epoch: ', 3.3824454779473605)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 689, ' ,    Loss Per Epoch: ', 3.3824581785273184)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 690, ' ,    Loss Per Epoch: ', 3.3824723281811386)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 691, ' ,    Loss Per Epoch: ', 3.3824862230397925)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 692, ' ,    Loss Per Epoch: ', 3.382500289009806)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 693, ' ,    Loss Per Epoch: ', 3.3825145651727393)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 694, ' ,    Loss Per Epoch: ', 3.382530735919274)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 695, ' ,    Loss Per Epoch: ', 3.382545784143308)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 696, ' ,    Loss Per Epoch: ', 3.3825622392437427)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 697, ' ,    Loss Per Epoch: ', 3.3825779380556877)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 698, ' ,    Loss Per Epoch: ', 3.3825947807449186)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 699, ' ,    Loss Per Epoch: ', 3.382611632216334)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 700, ' ,    Loss Per Epoch: ', 3.382627811888066)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 701, ' ,    Loss Per Epoch: ', 3.3826469951417644)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 702, ' ,    Loss Per Epoch: ', 3.3826650978720147)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 703, ' ,    Loss Per Epoch: ', 3.3826828061221965)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 704, ' ,    Loss Per Epoch: ', 3.382701340513437)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 705, ' ,    Loss Per Epoch: ', 3.3827210576556044)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 706, ' ,    Loss Per Epoch: ', 3.3827396041668076)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 707, ' ,    Loss Per Epoch: ', 3.3827594989973284)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 708, ' ,    Loss Per Epoch: ', 3.3827796479966676)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 709, ' ,    Loss Per Epoch: ', 3.3827998458443846)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 710, ' ,    Loss Per Epoch: ', 3.3828214617459147)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 711, ' ,    Loss Per Epoch: ', 3.382840820333919)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 712, ' ,    Loss Per Epoch: ', 3.382862968598985)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 713, ' ,    Loss Per Epoch: ', 3.382883847243611)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 714, ' ,    Loss Per Epoch: ', 3.3829065061145376)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 715, ' ,    Loss Per Epoch: ', 3.382928516069403)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 716, ' ,    Loss Per Epoch: ', 3.3829506910828266)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 717, ' ,    Loss Per Epoch: ', 3.382973844202536)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 718, ' ,    Loss Per Epoch: ', 3.382996403869552)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 719, ' ,    Loss Per Epoch: ', 3.3830203630260995)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 720, ' ,    Loss Per Epoch: ', 3.3830436864807574)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 721, ' ,    Loss Per Epoch: ', 3.383067219103343)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 722, ' ,    Loss Per Epoch: ', 3.3830915540731783)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 723, ' ,    Loss Per Epoch: ', 3.3831166296270214)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 724, ' ,    Loss Per Epoch: ', 3.3831408697702874)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 725, ' ,    Loss Per Epoch: ', 3.383166951920798)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 726, ' ,    Loss Per Epoch: ', 3.3831913806849094)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 727, ' ,    Loss Per Epoch: ', 3.3832173135943244)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 728, ' ,    Loss Per Epoch: ', 3.383242743529078)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 729, ' ,    Loss Per Epoch: ', 3.3832692761205263)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 730, ' ,    Loss Per Epoch: ', 3.3832948997755077)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 731, ' ,    Loss Per Epoch: ', 3.383321562187772)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 732, ' ,    Loss Per Epoch: ', 3.383348956528683)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 733, ' ,    Loss Per Epoch: ', 3.3833761406699145)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 734, ' ,    Loss Per Epoch: ', 3.38340267051709)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 735, ' ,    Loss Per Epoch: ', 3.3834315842715172)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 736, ' ,    Loss Per Epoch: ', 3.3834588473079497)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 737, ' ,    Loss Per Epoch: ', 3.383487094527901)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 738, ' ,    Loss Per Epoch: ', 3.383515471960775)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 739, ' ,    Loss Per Epoch: ', 3.3835438490499494)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 740, ' ,    Loss Per Epoch: ', 3.3835729943434876)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 741, ' ,    Loss Per Epoch: ', 3.3836021963212373)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 742, ' ,    Loss Per Epoch: ', 3.383631153970498)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 743, ' ,    Loss Per Epoch: ', 3.383661190690531)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 744, ' ,    Loss Per Epoch: ', 3.3836909080178192)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 745, ' ,    Loss Per Epoch: ', 3.3837206239049706)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 746, ' ,    Loss Per Epoch: ', 3.3837505173991804)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 747, ' ,    Loss Per Epoch: ', 3.383781092869856)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 748, ' ,    Loss Per Epoch: ', 3.3838124383806782)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 749, ' ,    Loss Per Epoch: ', 3.383842347530823)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 750, ' ,    Loss Per Epoch: ', 3.383874402963115)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 751, ' ,    Loss Per Epoch: ', 3.383904677247955)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 752, ' ,    Loss Per Epoch: ', 3.3839366183413038)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 753, ' ,    Loss Per Epoch: ', 3.383968043769618)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 754, ' ,    Loss Per Epoch: ', 3.383999341303129)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 755, ' ,    Loss Per Epoch: ', 3.3840324401262367)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 756, ' ,    Loss Per Epoch: ', 3.3840642416722244)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 757, ' ,    Loss Per Epoch: ', 3.3840968929996555)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 758, ' ,    Loss Per Epoch: ', 3.3841291177987167)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 759, ' ,    Loss Per Epoch: ', 3.3841624243886326)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 760, ' ,    Loss Per Epoch: ', 3.384194770584943)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 761, ' ,    Loss Per Epoch: ', 3.3842285547885305)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 762, ' ,    Loss Per Epoch: ', 3.3842619723397696)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 763, ' ,    Loss Per Epoch: ', 3.384295195224415)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 764, ' ,    Loss Per Epoch: ', 3.3843289329845314)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 765, ' ,    Loss Per Epoch: ', 3.384363543163388)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 766, ' ,    Loss Per Epoch: ', 3.3843972095715444)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 767, ' ,    Loss Per Epoch: ', 3.3844319699306276)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 768, ' ,    Loss Per Epoch: ', 3.3844654372864746)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 769, ' ,    Loss Per Epoch: ', 3.384500747549065)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 770, ' ,    Loss Per Epoch: ', 3.3845350767549154)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 771, ' ,    Loss Per Epoch: ', 3.38457046642795)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 772, ' ,    Loss Per Epoch: ', 3.384605004899698)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 773, ' ,    Loss Per Epoch: ', 3.3846406430790057)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 774, ' ,    Loss Per Epoch: ', 3.3846758295669224)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 775, ' ,    Loss Per Epoch: ', 3.38471127557606)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 776, ' ,    Loss Per Epoch: ', 3.384747136571034)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 777, ' ,    Loss Per Epoch: ', 3.38478317026759)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 778, ' ,    Loss Per Epoch: ', 3.384818760443708)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 779, ' ,    Loss Per Epoch: ', 3.3848549434794823)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 780, ' ,    Loss Per Epoch: ', 3.384891373286392)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 781, ' ,    Loss Per Epoch: ', 3.384927694061324)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 782, ' ,    Loss Per Epoch: ', 3.3849645830332245)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 783, ' ,    Loss Per Epoch: ', 3.3850009576797087)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 784, ' ,    Loss Per Epoch: ', 3.3850387522992924)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 785, ' ,    Loss Per Epoch: ', 3.3850757602254467)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 786, ' ,    Loss Per Epoch: ', 3.3851130933479907)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 787, ' ,    Loss Per Epoch: ', 3.3851506998130345)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 788, ' ,    Loss Per Epoch: ', 3.3851878662760737)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 789, ' ,    Loss Per Epoch: ', 3.3852258358089458)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 790, ' ,    Loss Per Epoch: ', 3.385263504349879)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 791, ' ,    Loss Per Epoch: ', 3.3853015577784356)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 792, ' ,    Loss Per Epoch: ', 3.3853392051676607)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 793, ' ,    Loss Per Epoch: ', 3.3853774236132823)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 794, ' ,    Loss Per Epoch: ', 3.385415770666992)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 795, ' ,    Loss Per Epoch: ', 3.3854543377083224)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 796, ' ,    Loss Per Epoch: ', 3.3854923535699446)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 797, ' ,    Loss Per Epoch: ', 3.3855316660741597)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 798, ' ,    Loss Per Epoch: ', 3.3855704525955863)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 799, ' ,    Loss Per Epoch: ', 3.3856096491688903)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 800, ' ,    Loss Per Epoch: ', 3.385648877024501)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 801, ' ,    Loss Per Epoch: ', 3.385687695114765)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 802, ' ,    Loss Per Epoch: ', 3.3857275415395756)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 803, ' ,    Loss Per Epoch: ', 3.385766387808435)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 804, ' ,    Loss Per Epoch: ', 3.3858066088226555)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 805, ' ,    Loss Per Epoch: ', 3.3858454756316436)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 806, ' ,    Loss Per Epoch: ', 3.3858855283734295)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 807, ' ,    Loss Per Epoch: ', 3.3859255797464582)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 808, ' ,    Loss Per Epoch: ', 3.385965139465649)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 809, ' ,    Loss Per Epoch: ', 3.386005229079816)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 810, ' ,    Loss Per Epoch: ', 3.386045795482182)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 811, ' ,    Loss Per Epoch: ', 3.3860859179458056)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 812, ' ,    Loss Per Epoch: ', 3.3861265734807318)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 813, ' ,    Loss Per Epoch: ', 3.386166777765642)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 814, ' ,    Loss Per Epoch: ', 3.386206961397347)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 815, ' ,    Loss Per Epoch: ', 3.386248017828125)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 816, ' ,    Loss Per Epoch: ', 3.386289196994828)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 817, ' ,    Loss Per Epoch: ', 3.3863300722199643)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 818, ' ,    Loss Per Epoch: ', 3.386371078115034)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 819, ' ,    Loss Per Epoch: ', 3.386411787426845)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 820, ' ,    Loss Per Epoch: ', 3.386453323183175)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 821, ' ,    Loss Per Epoch: ', 3.386494065698429)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 822, ' ,    Loss Per Epoch: ', 3.386536191442011)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 823, ' ,    Loss Per Epoch: ', 3.3865775032844034)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 824, ' ,    Loss Per Epoch: ', 3.386618866590429)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 825, ' ,    Loss Per Epoch: ', 3.3866606779669186)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 826, ' ,    Loss Per Epoch: ', 3.386701946438586)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 827, ' ,    Loss Per Epoch: ', 3.3867436525007917)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 828, ' ,    Loss Per Epoch: ', 3.3867858537913853)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 829, ' ,    Loss Per Epoch: ', 3.386827825861601)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 830, ' ,    Loss Per Epoch: ', 3.3868696508733036)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 831, ' ,    Loss Per Epoch: ', 3.3869124193459115)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 832, ' ,    Loss Per Epoch: ', 3.386954861339615)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 833, ' ,    Loss Per Epoch: ', 3.386996820321317)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 834, ' ,    Loss Per Epoch: ', 3.387039539894055)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 835, ' ,    Loss Per Epoch: ', 3.387081796816842)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 836, ' ,    Loss Per Epoch: ', 3.3871240288668614)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 837, ' ,    Loss Per Epoch: ', 3.3871668967681123)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 838, ' ,    Loss Per Epoch: ', 3.3872096997738685)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 839, ' ,    Loss Per Epoch: ', 3.387252096690444)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 840, ' ,    Loss Per Epoch: ', 3.387295578433418)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 841, ' ,    Loss Per Epoch: ', 3.387338070833714)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 842, ' ,    Loss Per Epoch: ', 3.3873815212922658)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 843, ' ,    Loss Per Epoch: ', 3.387424398214089)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 844, ' ,    Loss Per Epoch: ', 3.3874675710559883)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 845, ' ,    Loss Per Epoch: ', 3.3875111827891624)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 846, ' ,    Loss Per Epoch: ', 3.3875546004663772)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 847, ' ,    Loss Per Epoch: ', 3.3875977810818663)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 848, ' ,    Loss Per Epoch: ', 3.387641557645121)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 849, ' ,    Loss Per Epoch: ', 3.387684262426768)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 850, ' ,    Loss Per Epoch: ', 3.3877278563614177)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 851, ' ,    Loss Per Epoch: ', 3.3877723985819816)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 852, ' ,    Loss Per Epoch: ', 3.3878157075827438)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 853, ' ,    Loss Per Epoch: ', 3.387859535490927)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 854, ' ,    Loss Per Epoch: ', 3.3879032803650047)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 855, ' ,    Loss Per Epoch: ', 3.3879473023091387)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 856, ' ,    Loss Per Epoch: ', 3.387991259355167)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 857, ' ,    Loss Per Epoch: ', 3.388035428500614)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 858, ' ,    Loss Per Epoch: ', 3.388079647863395)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 859, ' ,    Loss Per Epoch: ', 3.3881232921161395)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 860, ' ,    Loss Per Epoch: ', 3.388167502077121)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 861, ' ,    Loss Per Epoch: ', 3.3882121164624195)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 862, ' ,    Loss Per Epoch: ', 3.388256840203059)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 863, ' ,    Loss Per Epoch: ', 3.3883005802833632)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 864, ' ,    Loss Per Epoch: ', 3.3883450578184604)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 865, ' ,    Loss Per Epoch: ', 3.3883899458546343)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 866, ' ,    Loss Per Epoch: ', 3.388434286612236)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 867, ' ,    Loss Per Epoch: ', 3.388479337551858)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 868, ' ,    Loss Per Epoch: ', 3.3885233705492555)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 869, ' ,    Loss Per Epoch: ', 3.3885688192065757)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 870, ' ,    Loss Per Epoch: ', 3.3886126613022203)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 871, ' ,    Loss Per Epoch: ', 3.3886575570256148)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 872, ' ,    Loss Per Epoch: ', 3.3887027499379556)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 873, ' ,    Loss Per Epoch: ', 3.3887474355443734)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 874, ' ,    Loss Per Epoch: ', 3.388792404308616)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 875, ' ,    Loss Per Epoch: ', 3.38883737338792)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 876, ' ,    Loss Per Epoch: ', 3.388882375376794)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 877, ' ,    Loss Per Epoch: ', 3.3889272157122092)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 878, ' ,    Loss Per Epoch: ', 3.3889727521836632)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 879, ' ,    Loss Per Epoch: ', 3.389017961427621)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 880, ' ,    Loss Per Epoch: ', 3.3890629956164116)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 881, ' ,    Loss Per Epoch: ', 3.389108022939914)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 882, ' ,    Loss Per Epoch: ', 3.389153561815008)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 883, ' ,    Loss Per Epoch: ', 3.3891983157699204)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 884, ' ,    Loss Per Epoch: ', 3.3892450961806597)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 885, ' ,    Loss Per Epoch: ', 3.3892894091482266)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 886, ' ,    Loss Per Epoch: ', 3.3893350430493)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 887, ' ,    Loss Per Epoch: ', 3.389380262304699)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 888, ' ,    Loss Per Epoch: ', 3.3894263633679507)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 889, ' ,    Loss Per Epoch: ', 3.3894716770662887)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 890, ' ,    Loss Per Epoch: ', 3.3895170488023907)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 891, ' ,    Loss Per Epoch: ', 3.389563192382691)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 892, ' ,    Loss Per Epoch: ', 3.389608682283325)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 893, ' ,    Loss Per Epoch: ', 3.3896543020987178)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 894, ' ,    Loss Per Epoch: ', 3.3897000454556734)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 895, ' ,    Loss Per Epoch: ', 3.3897457625472325)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 896, ' ,    Loss Per Epoch: ', 3.389791579562143)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 897, ' ,    Loss Per Epoch: ', 3.3898374285987574)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 898, ' ,    Loss Per Epoch: ', 3.389883550986251)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 899, ' ,    Loss Per Epoch: ', 3.3899291821089093)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 900, ' ,    Loss Per Epoch: ', 3.389975035462486)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 901, ' ,    Loss Per Epoch: ', 3.3900211664568647)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 902, ' ,    Loss Per Epoch: ', 3.3900670445328114)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 903, ' ,    Loss Per Epoch: ', 3.3901133169306434)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 904, ' ,    Loss Per Epoch: ', 3.39015935141717)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 905, ' ,    Loss Per Epoch: ', 3.390205505554601)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 906, ' ,    Loss Per Epoch: ', 3.3902514095162952)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 907, ' ,    Loss Per Epoch: ', 3.390297479977064)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 908, ' ,    Loss Per Epoch: ', 3.390343618726753)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 909, ' ,    Loss Per Epoch: ', 3.39038993751165)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 910, ' ,    Loss Per Epoch: ', 3.3904358291341885)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 911, ' ,    Loss Per Epoch: ', 3.390482725904197)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 912, ' ,    Loss Per Epoch: ', 3.390528834496736)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 913, ' ,    Loss Per Epoch: ', 3.3905748079997386)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 914, ' ,    Loss Per Epoch: ', 3.3906210607191647)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 915, ' ,    Loss Per Epoch: ', 3.3906674445658487)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 916, ' ,    Loss Per Epoch: ', 3.390713614359655)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 917, ' ,    Loss Per Epoch: ', 3.390760363655743)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 918, ' ,    Loss Per Epoch: ', 3.390806964050582)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 919, ' ,    Loss Per Epoch: ', 3.3908531497382532)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 920, ' ,    Loss Per Epoch: ', 3.390899596635492)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 921, ' ,    Loss Per Epoch: ', 3.3909463027934654)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 922, ' ,    Loss Per Epoch: ', 3.390992789615615)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 923, ' ,    Loss Per Epoch: ', 3.3910388557717543)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 924, ' ,    Loss Per Epoch: ', 3.39108561721094)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 925, ' ,    Loss Per Epoch: ', 3.3911322337179692)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 926, ' ,    Loss Per Epoch: ', 3.3911789320701606)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 927, ' ,    Loss Per Epoch: ', 3.3912251389540264)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 928, ' ,    Loss Per Epoch: ', 3.391272127599058)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 929, ' ,    Loss Per Epoch: ', 3.3913186232487007)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 930, ' ,    Loss Per Epoch: ', 3.391365253238979)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 931, ' ,    Loss Per Epoch: ', 3.3914119013064337)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 932, ' ,    Loss Per Epoch: ', 3.3914586631994483)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 933, ' ,    Loss Per Epoch: ', 3.391505389841011)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 934, ' ,    Loss Per Epoch: ', 3.391551800132555)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 935, ' ,    Loss Per Epoch: ', 3.3915987434774886)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 936, ' ,    Loss Per Epoch: ', 3.391645225105957)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 937, ' ,    Loss Per Epoch: ', 3.391692495246814)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 938, ' ,    Loss Per Epoch: ', 3.391739392656626)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 939, ' ,    Loss Per Epoch: ', 3.391785603038251)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 940, ' ,    Loss Per Epoch: ', 3.391832518968305)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 941, ' ,    Loss Per Epoch: ', 3.391879354751579)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 942, ' ,    Loss Per Epoch: ', 3.391926143762223)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 943, ' ,    Loss Per Epoch: ', 3.3919727333689433)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 944, ' ,    Loss Per Epoch: ', 3.39201987571927)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 945, ' ,    Loss Per Epoch: ', 3.392066310824151)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 946, ' ,    Loss Per Epoch: ', 3.392113585325021)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 947, ' ,    Loss Per Epoch: ', 3.3921601258185583)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 948, ' ,    Loss Per Epoch: ', 3.3922073949584863)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 949, ' ,    Loss Per Epoch: ', 3.3922541201425642)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 950, ' ,    Loss Per Epoch: ', 3.39230093764696)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 951, ' ,    Loss Per Epoch: ', 3.392347922484713)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 952, ' ,    Loss Per Epoch: ', 3.392394624522064)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 953, ' ,    Loss Per Epoch: ', 3.3924415300825634)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 954, ' ,    Loss Per Epoch: ', 3.392488441190217)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 955, ' ,    Loss Per Epoch: ', 3.392535538615125)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 956, ' ,    Loss Per Epoch: ', 3.3925822339924845)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 957, ' ,    Loss Per Epoch: ', 3.392629249812844)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 958, ' ,    Loss Per Epoch: ', 3.392676621356854)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 959, ' ,    Loss Per Epoch: ', 3.392723183039869)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 960, ' ,    Loss Per Epoch: ', 3.392770080584588)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 961, ' ,    Loss Per Epoch: ', 3.3928170783998963)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 962, ' ,    Loss Per Epoch: ', 3.392864384044185)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 963, ' ,    Loss Per Epoch: ', 3.392911447230423)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 964, ' ,    Loss Per Epoch: ', 3.3929581452696604)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 965, ' ,    Loss Per Epoch: ', 3.393005541404333)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 966, ' ,    Loss Per Epoch: ', 3.3930523294063075)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 967, ' ,    Loss Per Epoch: ', 3.393099512430358)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 968, ' ,    Loss Per Epoch: ', 3.393146698457184)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 969, ' ,    Loss Per Epoch: ', 3.3931933798031424)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 970, ' ,    Loss Per Epoch: ', 3.393240571362265)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 971, ' ,    Loss Per Epoch: ', 3.3932875363009134)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 972, ' ,    Loss Per Epoch: ', 3.393334613728442)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 973, ' ,    Loss Per Epoch: ', 3.393381447635936)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 974, ' ,    Loss Per Epoch: ', 3.3934284390817164)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 975, ' ,    Loss Per Epoch: ', 3.393475662000019)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 976, ' ,    Loss Per Epoch: ', 3.3935223347137335)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 977, ' ,    Loss Per Epoch: ', 3.3935698301845694)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 978, ' ,    Loss Per Epoch: ', 3.393616149592283)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 979, ' ,    Loss Per Epoch: ', 3.3936638303036464)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 980, ' ,    Loss Per Epoch: ', 3.3937107216719133)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 981, ' ,    Loss Per Epoch: ', 3.3937575536756013)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 982, ' ,    Loss Per Epoch: ', 3.393804556643682)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 983, ' ,    Loss Per Epoch: ', 3.393851850936531)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 984, ' ,    Loss Per Epoch: ', 3.3938986007301324)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 985, ' ,    Loss Per Epoch: ', 3.3939459054583745)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 986, ' ,    Loss Per Epoch: ', 3.3939927653624418)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 987, ' ,    Loss Per Epoch: ', 3.3940398753283034)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 988, ' ,    Loss Per Epoch: ', 3.3940869855681863)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 989, ' ,    Loss Per Epoch: ', 3.3941338970894104)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 990, ' ,    Loss Per Epoch: ', 3.394180851550724)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 991, ' ,    Loss Per Epoch: ', 3.3942281583399243)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 992, ' ,    Loss Per Epoch: ', 3.394274797718059)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 993, ' ,    Loss Per Epoch: ', 3.394321877900161)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 994, ' ,    Loss Per Epoch: ', 3.3943686903660977)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 995, ' ,    Loss Per Epoch: ', 3.3944156479867806)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 996, ' ,    Loss Per Epoch: ', 3.3944626918202108)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 997, ' ,    Loss Per Epoch: ', 3.394509971540729)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 998, ' ,    Loss Per Epoch: ', 3.3945566154640585)
+Validation accuracy: 0.35
+training accuracy: 1.00
+('Epoch', 999, ' ,    Loss Per Epoch: ', 3.394604016052356)
+Validation accuracy: 0.35
+training accuracy: 1.00
+
+#Validation Set
+
+valid_examples = xval.shape[0]
+
+scores_valid, layers_valid = FwdPass(minimum_w,minimum_b,layers,0,xval,valid_examples)
+
+predicted_class_v = np.argmax(scores_valid, axis=1)
+
+print ('Validation accuracy: %.2f' % (np.mean(predicted_class_v == yval)))
+
+# w = np.random.randn(Dimensions,hidden1)/np.sqrt(Dimensions/2)
+
+# b = np.zeros((hidden1))
+
+# w2 = np.random.randn(hidden1,hidden2)/np.sqrt(hidden1/2)
+
+# b2 = np.zeros((hidden2))
+
+# w3 = np.random.randn(hidden2,classes)/np.sqrt(hidden2/2)
+
+# b3 = np.zeros((classes))
+
+​
+
+#ADAM Weight Updates       
+
+beta1 = 0.5
+
+beta2 = 0.5
+
+While True:
+
+    #HiddenLayer1
+
+    Minibatch = xtr[:256]
+
+    Val = net.forwardPass(Minibatch,w)
+
+    Grad = net.backwardPass(Val, w)
+
+    momentum1 = beta1*momentum1 + (1-beta1)*Grad
+
+    Accum1 = beta2*Accum1 + (1-beta2)*(Grad*Grad)
+
+    w += (-learning_rate * momentum1) / (sqrt(Accum1) + 1e-7)
+
+    #HiddenLayer2
+
+    Minibatch = hidden_layer_1[:256]
+
+    Val = net.forwardPass(Minibatch,w2)
+
+    Grad = net.backwardPass(Val, w2)
+
+    momentum2 = beta1*momentum2 + (1-beta1)*Grad
+
+    Accum2 = beta2*Accum2 + (1-beta2)*(Grad*Grad)
+
+    w2 += (-learning_rate * momentum2) / (sqrt(Accum2) + 1e-7)
+
+    #Output
+
+    Minibatch = hidden_layer_2[:256]
+
+    Val = net.forwardPass(Minibatch,w3)
+
+    Grad = net.backwardPass(Val, w3)
+
+    momentum3 = beta1*momentum + (1-beta1)*Grad
+
+    Accum3 = beta2*Accum3 + (1-beta2)*(Grad*Grad)
+
+    w3 += (-learning_rate * momentum3) / (sqrt(Accum3) + 1e-7)
+
+   
+
+​
+
+​
+

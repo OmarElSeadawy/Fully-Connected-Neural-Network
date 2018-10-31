@@ -1,0 +1,1137 @@
+
+Jupyter Notebook
+NeuralNetwork Last Checkpoint: 2 hours ago (unsaved changes)
+
+Python 2
+
+    File
+    Edit
+    View
+    Insert
+    Cell
+    Kernel
+    Help
+
+import numpy as np
+
+import pylab as pl
+
+import math
+
+from sklearn.utils import shuffle
+
+import matplotlib.pyplot as plotter
+
+from pickle import *
+
+def unpickle(file):
+
+    import pickle
+
+    with open(file, 'rb') as fo:
+
+        dict = pickle.load(fo)
+
+        return dict
+
+datadict = unpickle("./Data/cifar-100-python/train")
+
+xTrain = datadict[b'data']
+
+yTrain = datadict[b'coarse_labels']
+
+xtr= xTrain[:40000]
+
+ytr= yTrain[:40000]
+
+xval = xTrain[40000:]
+
+yval = yTrain[40000:]
+
+def SoftmaxFn(classscores,y):
+
+    exps = np.exp(classscores,dtype=np.float64)
+
+    probability = exps / np.sum(exps, axis=1, keepdims=True)
+
+    q = exps.shape[0]
+
+    correct_log = -np.log(probability[np.arange(q),y] + 1e-9)             
+
+    return correct_log,probability
+
+def ReLUFwd(x):
+
+    return np.maximum(0.1*x,x,dtype=np.float64)
+
+def FwdPass(w,b,layers,E,x,MiniBatchSize):
+
+    layers_step = []
+
+    HiddenNeurons1 = ReLUFwd(np.dot(x[E*MiniBatchSize:(E+1)*MiniBatchSize],w[0])+b[0])
+
+    layers_step.append(HiddenNeurons1)
+
+    HiddenNeurons2 = ReLUFwd(np.dot(HiddenNeurons1,w[1])+b[1])
+
+    layers_step.append(HiddenNeurons2)
+
+    scores = ReLUFwd(np.dot(HiddenNeurons2,w[2])+b[2])
+
+    layers_step.append(scores)
+
+    return scores,layers_step
+
+def BackwdPass(E,layers,layers_step,probability,ytr,Examples,w):
+
+    gradient_scores = probability
+
+    gradient_scores[np.arange(MiniBatchSize),ytr[E*MiniBatchSize:(E+1)*MiniBatchSize]] -= 1
+
+    gradient_scores /= MiniBatchSize
+
+    derivative_step = gradient_scores
+
+    dw = []
+
+    db = []
+
+    #This loops twice to get DW between Layer 2 and Out, and between Layer 1 and Layer 2
+
+    for i in reversed(range(len(layers_step)-1)):
+
+        dw.append(np.dot(layers_step[i].T,derivative_step))
+
+        db.append(np.sum(derivative_step,axis=0,keepdims=True))
+
+        dh = np.dot(derivative_step,w[i+1].T)
+
+        dh[layers_step[i] <= 0] *= 0.1
+
+        derivative_step = dh
+
+    #This is to get DW and DB between Input Layer and Layer 1 
+
+    dw.append(np.dot(xtr[E*MiniBatchSize:(E+1)*MiniBatchSize].T,dh))
+
+    db.append(np.sum(dh,axis=0,keepdims=True))
+
+    return dw,db
+
+#Dimensions and Layers
+
+# Dimensions = 3072
+
+# hidden1 = 1024
+
+# hidden2 = 512
+
+# classes = 20
+
+MiniBatchSize = 256
+
+layers = [3072,2048,1024,20]
+
+​
+
+#HyperParameters
+
+learn_rate = 1e-3
+
+reg = 1e-3
+
+beta1 = 0.9
+
+beta2 = 0.999
+
+​
+
+Examples = xtr.shape[0]
+
+valid_examples = xval.shape[0]
+
+#Data Preprocessing (Zero Centering and Normalization)
+
+xtr = np.array(xtr,dtype=np.float64)
+
+xtr -= np.mean(xtr)
+
+xtr /= np.std(xtr)
+
+xval = np.array(xval,dtype=np.float64)
+
+xval -= np.mean(xval)
+
+xval /= np.std(xval)
+
+np.random.seed(0)
+
+w = []
+
+b = []
+
+momentum = 0
+
+accum = 0
+
+#Initializing Weights
+
+for i in range(len(layers)-1):
+
+    w.append(np.random.randn(layers[i],layers[i+1])/np.sqrt(layers[i]/2)) 
+
+    b.append(np.zeros((layers[i+1])))
+
+    
+
+minimum_loss = 0
+
+Val_acc = 1e-3
+
+minimum_w = []
+
+minimum_b = []
+
+Loss_Per_Epoch_Total = []
+
+Loss_Per_Epoch
+
+for qq in range(300):
+
+    Loss_Per_iter_total = []
+
+    Loss_Per_iter = []
+
+    for E in range(156):
+
+        scores,layers_step = FwdPass(w,b,layers,E,xtr,MiniBatchSize)
+
+        loss,probability = SoftmaxFn(scores,ytr[E*MiniBatchSize:(E+1)*MiniBatchSize])
+
+        reg_loss = 0.5*reg*np.sum(w[0]*w[0]) + 0.5*reg*np.sum(w[1]*w[1]) + 0.5*reg*np.sum(w[2]*w[2]) 
+
+        total_loss = loss + reg_loss
+
+        Loss_Per_iter_total.append(np.mean(total_loss,dtype=np.float64))
+
+        Loss_Per_iter.append(np.mean(loss,dtype=np.float64))
+
+​
+
+        dw,db = BackwdPass(E,layers,layers_step,probability,ytr,Examples, w)
+
+        dw = np.array(dw)
+
+​
+
+        #Swapping First Row with Last row because of difference in orders
+
+        dw[0],dw[2] = dw[2],dw[0]
+
+        db[0],db[2] = db[2],db[0]
+
+        
+
+        for q in range(len(w)):
+
+            dw[q] += reg * w[q]
+
+​
+
+        #Updating Weights and Biases
+
+        momentum = (1-beta1)*dw + beta1*momentum
+
+        accum = (1-beta2)*(dw*dw) + beta2*accum
+
+        accum_s = accum
+
+#         accum = ((1-beta2)*(dw*dw)) + beta2*accum
+
+#         accum = dw+dw
+
+        for q in range(len(accum)):
+
+            accum_s[q] = np.sqrt(accum_s[q],dtype=np.float64)
+
+       
+
+        w += -learn_rate * momentum / (accum_s + 1e-7)
+
+        for q in range(len(db)):
+
+            db[q] = np.reshape(db[q],(db[q].shape[1]))
+
+            b[q] += -learn_rate*db[q]
+
+        
+
+        if(Val_acc < minimum_loss):
+
+            minimum_w = w
+
+            minimum_b = b
+
+            minimum_loss = Val_acc
+
+            
+
+    Loss_Per_Epoch.append(np.mean(Loss_Per_iter))
+
+    Loss_Per_Epoch_Total.append(np.mean(Loss_Per_iter_total))
+
+    print("Epoch", qq, " , Total_Loss: " , Loss_Per_Epoch_Total[qq] , ", Loss : ", Loss_Per_Epoch[qq]) 
+
+    #Validation Set
+
+    print ("Training Accuracy : " , (np.mean(predicted_class == ytr[E*MiniBatchSize:(E+1)*MiniBatchSize])) )
+
+    scores_valid, layers_valid = FwdPass(minimum_w,minimum_b,layers,0,xval,valid_examples)
+
+    predicted_class_v = np.argmax(scores_valid, axis=1)
+
+    valid_loss,valid_prob = SoftmaxFn(scores_valid,yval)
+
+    predicted_class = np.argmax(scores, axis=1)
+
+    Val_acc = (np.mean(predicted_class_v == yval))
+
+    print ("Validation Loss : " , (np.mean(valid_loss)))
+
+    print ("Validation Accuracy : ", Val_acc)
+
+    print("-----------------------------------------------------------------------")
+
+('Epoch', 0, ' , Total_Loss: ', 9.442391562783842, ', Loss : ', 9.442391562783842)
+('Training Accuracy : ', 0.16796875)
+('Validation Loss : ', 3.927513365052052)
+('Validation Accuracy : ', 0.1825)
+-----------------------------------------------------------------------
+('Epoch', 1, ' , Total_Loss: ', 6.523913953945072, ', Loss : ', 6.523913953945072)
+('Training Accuracy : ', 0.16796875)
+('Validation Loss : ', 3.080421276289994)
+('Validation Accuracy : ', 0.1986)
+-----------------------------------------------------------------------
+('Epoch', 2, ' , Total_Loss: ', 6.0390091722474954, ', Loss : ', 6.0390091722474954)
+('Training Accuracy : ', 0.19140625)
+('Validation Loss : ', 2.814688785471322)
+('Validation Accuracy : ', 0.2095)
+-----------------------------------------------------------------------
+('Epoch', 3, ' , Total_Loss: ', 5.853721479093586, ', Loss : ', 5.853721479093587)
+('Training Accuracy : ', 0.1796875)
+('Validation Loss : ', 2.704275650018583)
+('Validation Accuracy : ', 0.2175)
+-----------------------------------------------------------------------
+('Epoch', 4, ' , Total_Loss: ', 5.7596230302223415, ', Loss : ', 5.7596230302223415)
+('Training Accuracy : ', 0.1953125)
+('Validation Loss : ', 2.63984271910609)
+('Validation Accuracy : ', 0.2254)
+-----------------------------------------------------------------------
+('Epoch', 5, ' , Total_Loss: ', 5.698068264846114, ', Loss : ', 5.698068264846114)
+('Training Accuracy : ', 0.20703125)
+('Validation Loss : ', 2.5960535975456116)
+('Validation Accuracy : ', 0.2313)
+-----------------------------------------------------------------------
+('Epoch', 6, ' , Total_Loss: ', 5.652815410753792, ', Loss : ', 5.652815410753792)
+('Training Accuracy : ', 0.2265625)
+('Validation Loss : ', 2.5638351993956925)
+('Validation Accuracy : ', 0.2361)
+-----------------------------------------------------------------------
+('Epoch', 7, ' , Total_Loss: ', 5.617454586189481, ', Loss : ', 6.323759121474615)
+('Training Accuracy : ', 0.234375)
+('Validation Loss : ', 2.5388000646625852)
+('Validation Accuracy : ', 0.2395)
+-----------------------------------------------------------------------
+('Epoch', 8, ' , Total_Loss: ', 5.588585003012558, ', Loss : ', 3.4079819846525767)
+('Training Accuracy : ', 0.234375)
+('Validation Loss : ', 2.5187454876027573)
+('Validation Accuracy : ', 0.2433)
+-----------------------------------------------------------------------
+('Epoch', 9, ' , Total_Loss: ', 5.564245174021349, ', Loss : ', 2.924744466135344)
+('Training Accuracy : ', 0.23828125)
+('Validation Loss : ', 2.502158850446089)
+('Validation Accuracy : ', 0.2452)
+-----------------------------------------------------------------------
+('Epoch', 10, ' , Total_Loss: ', 5.543103674199729, ', Loss : ', 2.740814425922535)
+('Training Accuracy : ', 0.24609375)
+('Validation Loss : ', 2.488056611987825)
+('Validation Accuracy : ', 0.2467)
+-----------------------------------------------------------------------
+('Epoch', 11, ' , Total_Loss: ', 5.524356105232355, ', Loss : ', 6.323759121474615)
+('Training Accuracy : ', 0.25)
+('Validation Loss : ', 2.475900733756613)
+('Validation Accuracy : ', 0.2481)
+-----------------------------------------------------------------------
+('Epoch', 12, ' , Total_Loss: ', 5.507431069357843, ', Loss : ', 3.4079819846525767)
+('Training Accuracy : ', 0.25)
+('Validation Loss : ', 2.465191434619268)
+('Validation Accuracy : ', 0.2506)
+-----------------------------------------------------------------------
+('Epoch', 13, ' , Total_Loss: ', 5.491968303992542, ', Loss : ', 2.9247444661353437)
+('Training Accuracy : ', 0.24609375)
+('Validation Loss : ', 2.4555933916123602)
+('Validation Accuracy : ', 0.2531)
+-----------------------------------------------------------------------
+('Epoch', 14, ' , Total_Loss: ', 5.477671834821091, ', Loss : ', 2.740814425922535)
+('Training Accuracy : ', 0.24609375)
+('Validation Loss : ', 2.4469675986994117)
+('Validation Accuracy : ', 0.2561)
+-----------------------------------------------------------------------
+('Epoch', 15, ' , Total_Loss: ', 5.464386656586947, ', Loss : ', 2.6479506342789745)
+('Training Accuracy : ', 0.24609375)
+('Validation Loss : ', 2.4391568231388265)
+('Validation Accuracy : ', 0.2585)
+-----------------------------------------------------------------------
+('Epoch', 16, ' , Total_Loss: ', 5.451944396210647, ', Loss : ', 2.587563221440633)
+('Training Accuracy : ', 0.2421875)
+('Validation Loss : ', 2.432023577140785)
+('Validation Accuracy : ', 0.2594)
+-----------------------------------------------------------------------
+('Epoch', 17, ' , Total_Loss: ', 5.44016720844897, ', Loss : ', 2.543434469759884)
+('Training Accuracy : ', 0.25390625)
+('Validation Loss : ', 2.425448731099884)
+('Validation Accuracy : ', 0.2609)
+-----------------------------------------------------------------------
+('Epoch', 18, ' , Total_Loss: ', 5.429036675364356, ', Loss : ', 6.323759121474616)
+('Training Accuracy : ', 0.26171875)
+('Validation Loss : ', 2.4194011720865025)
+('Validation Accuracy : ', 0.2624)
+-----------------------------------------------------------------------
+('Epoch', 19, ' , Total_Loss: ', 5.418465878675569, ', Loss : ', 6.323759121474617)
+('Training Accuracy : ', 0.265625)
+('Validation Loss : ', 2.413817026385217)
+('Validation Accuracy : ', 0.2649)
+-----------------------------------------------------------------------
+('Epoch', 20, ' , Total_Loss: ', 5.40838329915041, ', Loss : ', 3.4079819846525767)
+('Training Accuracy : ', 0.2734375)
+('Validation Loss : ', 2.4086094028850824)
+('Validation Accuracy : ', 0.2665)
+-----------------------------------------------------------------------
+('Epoch', 21, ' , Total_Loss: ', 5.39875473325872, ', Loss : ', 2.924744466135344)
+('Training Accuracy : ', 0.27734375)
+('Validation Loss : ', 2.4036790047055043)
+('Validation Accuracy : ', 0.2686)
+-----------------------------------------------------------------------
+('Epoch', 22, ' , Total_Loss: ', 5.389501944623668, ', Loss : ', 2.7408144259225344)
+('Training Accuracy : ', 0.28125)
+('Validation Loss : ', 2.3989962835135676)
+('Validation Accuracy : ', 0.27)
+-----------------------------------------------------------------------
+('Epoch', 23, ' , Total_Loss: ', 5.380582679239755, ', Loss : ', 2.6479506342789745)
+('Training Accuracy : ', 0.28125)
+('Validation Loss : ', 2.3945184088220173)
+('Validation Accuracy : ', 0.2708)
+-----------------------------------------------------------------------
+('Epoch', 24, ' , Total_Loss: ', 5.37197548585175, ', Loss : ', 2.587563221440633)
+('Training Accuracy : ', 0.28125)
+('Validation Loss : ', 2.390345439120941)
+('Validation Accuracy : ', 0.2722)
+-----------------------------------------------------------------------
+('Epoch', 25, ' , Total_Loss: ', 5.363664366007436, ', Loss : ', 2.543434469759884)
+('Training Accuracy : ', 0.28515625)
+('Validation Loss : ', 2.3863885873550488)
+('Validation Accuracy : ', 0.2733)
+-----------------------------------------------------------------------
+('Epoch', 26, ' , Total_Loss: ', 5.35563436112589, ', Loss : ', 2.5091675883606523)
+('Training Accuracy : ', 0.2890625)
+('Validation Loss : ', 2.3826106500085045)
+('Validation Accuracy : ', 0.2748)
+-----------------------------------------------------------------------
+('Epoch', 27, ' , Total_Loss: ', 5.347857198540005, ', Loss : ', 2.4813697540520745)
+('Training Accuracy : ', 0.2890625)
+('Validation Loss : ', 2.378987340782547)
+('Validation Accuracy : ', 0.2753)
+-----------------------------------------------------------------------
+('Epoch', 28, ' , Total_Loss: ', 5.3402864647603865, ', Loss : ', 2.4580846856169543)
+('Training Accuracy : ', 0.29296875)
+('Validation Loss : ', 2.375514675262462)
+('Validation Accuracy : ', 0.276)
+-----------------------------------------------------------------------
+('Epoch', 29, ' , Total_Loss: ', 5.332912965103744, ', Loss : ', 2.4379845110359963)
+('Training Accuracy : ', 0.296875)
+('Validation Loss : ', 2.372183090275384)
+('Validation Accuracy : ', 0.2771)
+-----------------------------------------------------------------------
+('Epoch', 30, ' , Total_Loss: ', 5.325721659766495, ', Loss : ', 2.4202672726745402)
+('Training Accuracy : ', 0.30078125)
+('Validation Loss : ', 2.369054278894536)
+('Validation Accuracy : ', 0.2779)
+-----------------------------------------------------------------------
+('Epoch', 31, ' , Total_Loss: ', 5.318695684847738, ', Loss : ', 2.404363347981104)
+('Training Accuracy : ', 0.3046875)
+('Validation Loss : ', 2.3660204211126055)
+('Validation Accuracy : ', 0.2785)
+-----------------------------------------------------------------------
+('Epoch', 32, ' , Total_Loss: ', 5.311831518636224, ', Loss : ', 2.3899137931013623)
+('Training Accuracy : ', 0.30859375)
+('Validation Loss : ', 2.3630952248694155)
+('Validation Accuracy : ', 0.2793)
+-----------------------------------------------------------------------
+('Epoch', 33, ' , Total_Loss: ', 5.305108982641235, ', Loss : ', 2.3766236340486477)
+('Training Accuracy : ', 0.30859375)
+('Validation Loss : ', 2.3602903083783064)
+('Validation Accuracy : ', 0.2812)
+-----------------------------------------------------------------------
+('Epoch', 34, ' , Total_Loss: ', 5.298536321142791, ', Loss : ', 2.364338600981059)
+('Training Accuracy : ', 0.30859375)
+('Validation Loss : ', 2.3575891903818564)
+('Validation Accuracy : ', 0.2829)
+-----------------------------------------------------------------------
+('Epoch', 35, ' , Total_Loss: ', 5.292093855769652, ', Loss : ', 2.352890963453339)
+('Training Accuracy : ', 0.30859375)
+('Validation Loss : ', 2.3549892796185596)
+('Validation Accuracy : ', 0.283)
+-----------------------------------------------------------------------
+('Epoch', 36, ' , Total_Loss: ', 5.2857660418072845, ', Loss : ', 2.342103384847433)
+('Training Accuracy : ', 0.3046875)
+('Validation Loss : ', 2.3524803355405663)
+('Validation Accuracy : ', 0.284)
+-----------------------------------------------------------------------
+('Epoch', 37, ' , Total_Loss: ', 5.279555723112027, ', Loss : ', 2.3319578633128946)
+('Training Accuracy : ', 0.30859375)
+('Validation Loss : ', 2.350043890230423)
+('Validation Accuracy : ', 0.284)
+-----------------------------------------------------------------------
+('Epoch', 38, ' , Total_Loss: ', 5.273445644474959, ', Loss : ', 2.322367872176217)
+('Training Accuracy : ', 0.30859375)
+('Validation Loss : ', 2.3476756560336103)
+('Validation Accuracy : ', 0.285)
+-----------------------------------------------------------------------
+('Epoch', 39, ' , Total_Loss: ', 5.2674447741381005, ', Loss : ', 2.313262209005794)
+('Training Accuracy : ', 0.3125)
+('Validation Loss : ', 2.3453798240843238)
+('Validation Accuracy : ', 0.2853)
+-----------------------------------------------------------------------
+('Epoch', 40, ' , Total_Loss: ', 5.261539356789646, ', Loss : ', 2.3046069362657278)
+('Training Accuracy : ', 0.3125)
+('Validation Loss : ', 2.3431282078022893)
+('Validation Accuracy : ', 0.2855)
+-----------------------------------------------------------------------
+('Epoch', 41, ' , Total_Loss: ', 5.255709003445418, ', Loss : ', 2.2963240473476625)
+('Training Accuracy : ', 0.3203125)
+('Validation Loss : ', 2.3409447801534675)
+('Validation Accuracy : ', 0.2859)
+-----------------------------------------------------------------------
+('Epoch', 42, ' , Total_Loss: ', 5.2499672225765925, ', Loss : ', 2.2883714663174684)
+('Training Accuracy : ', 0.3203125)
+('Validation Loss : ', 2.3388297870253787)
+('Validation Accuracy : ', 0.2859)
+-----------------------------------------------------------------------
+('Epoch', 43, ' , Total_Loss: ', 5.244312950393933, ', Loss : ', 2.2807279091408543)
+('Training Accuracy : ', 0.3203125)
+('Validation Loss : ', 2.336745201008585)
+('Validation Accuracy : ', 0.2873)
+-----------------------------------------------------------------------
+('Epoch', 44, ' , Total_Loss: ', 5.238733288397971, ', Loss : ', 2.273377540226765)
+('Training Accuracy : ', 0.3203125)
+('Validation Loss : ', 2.334728854673058)
+('Validation Accuracy : ', 0.2874)
+-----------------------------------------------------------------------
+('Epoch', 45, ' , Total_Loss: ', 5.233226337876633, ', Loss : ', 2.266305548196568)
+('Training Accuracy : ', 0.3203125)
+('Validation Loss : ', 2.332793629632672)
+('Validation Accuracy : ', 0.2875)
+-----------------------------------------------------------------------
+('Epoch', 46, ' , Total_Loss: ', 5.2277918690982235, ', Loss : ', 2.259483765601243)
+('Training Accuracy : ', 0.3203125)
+('Validation Loss : ', 2.3308690566507275)
+('Validation Accuracy : ', 0.2879)
+-----------------------------------------------------------------------
+('Epoch', 47, ' , Total_Loss: ', 5.222434449889365, ', Loss : ', 2.2528659144205627)
+('Training Accuracy : ', 0.3203125)
+('Validation Loss : ', 2.329017162120164)
+('Validation Accuracy : ', 0.289)
+-----------------------------------------------------------------------
+('Epoch', 48, ' , Total_Loss: ', 5.2171528525081134, ', Loss : ', 2.246442910085052)
+('Training Accuracy : ', 0.33203125)
+('Validation Loss : ', 2.327197709638966)
+('Validation Accuracy : ', 0.29)
+-----------------------------------------------------------------------
+('Epoch', 49, ' , Total_Loss: ', 5.211927127042642, ', Loss : ', 2.240199794723117)
+('Training Accuracy : ', 0.328125)
+('Validation Loss : ', 2.325425436532232)
+('Validation Accuracy : ', 0.2907)
+-----------------------------------------------------------------------
+('Epoch', 50, ' , Total_Loss: ', 5.206756604690121, ', Loss : ', 2.2341197691414916)
+('Training Accuracy : ', 0.328125)
+('Validation Loss : ', 2.323705744478494)
+('Validation Accuracy : ', 0.2913)
+-----------------------------------------------------------------------
+('Epoch', 51, ' , Total_Loss: ', 5.201630631124567, ', Loss : ', 2.228199396259881)
+('Training Accuracy : ', 0.328125)
+('Validation Loss : ', 2.322060664905697)
+('Validation Accuracy : ', 0.2927)
+-----------------------------------------------------------------------
+('Epoch', 52, ' , Total_Loss: ', 5.196552678692706, ', Loss : ', 2.222418584304095)
+('Training Accuracy : ', 0.328125)
+('Validation Loss : ', 2.3204639540851555)
+('Validation Accuracy : ', 0.2929)
+-----------------------------------------------------------------------
+('Epoch', 53, ' , Total_Loss: ', 5.191531575325324, ', Loss : ', 2.2167856281217846)
+('Training Accuracy : ', 0.3359375)
+('Validation Loss : ', 2.3188746716406947)
+('Validation Accuracy : ', 0.2931)
+-----------------------------------------------------------------------
+('Epoch', 54, ' , Total_Loss: ', 5.186564309522321, ', Loss : ', 2.211280885124267)
+('Training Accuracy : ', 0.33984375)
+('Validation Loss : ', 2.3173404262113984)
+('Validation Accuracy : ', 0.2938)
+-----------------------------------------------------------------------
+('Epoch', 55, ' , Total_Loss: ', 5.181655077922053, ', Loss : ', 2.205888851291726)
+('Training Accuracy : ', 0.33984375)
+('Validation Loss : ', 2.3158295255398835)
+('Validation Accuracy : ', 0.2944)
+-----------------------------------------------------------------------
+('Epoch', 56, ' , Total_Loss: ', 5.176794188445308, ', Loss : ', 2.200612432383535)
+('Training Accuracy : ', 0.33984375)
+('Validation Loss : ', 2.3143313089406066)
+('Validation Accuracy : ', 0.2949)
+-----------------------------------------------------------------------
+('Epoch', 57, ' , Total_Loss: ', 5.171976209612822, ', Loss : ', 2.1954344377870223)
+('Training Accuracy : ', 0.33984375)
+('Validation Loss : ', 2.3128905975775926)
+('Validation Accuracy : ', 0.2961)
+-----------------------------------------------------------------------
+('Epoch', 58, ' , Total_Loss: ', 5.167190480069073, ', Loss : ', 2.190363854744501)
+('Training Accuracy : ', 0.33984375)
+('Validation Loss : ', 2.31145219752193)
+('Validation Accuracy : ', 0.2965)
+-----------------------------------------------------------------------
+('Epoch', 59, ' , Total_Loss: ', 5.1624488597726765, ', Loss : ', 2.1853869542660824)
+('Training Accuracy : ', 0.33984375)
+('Validation Loss : ', 2.310055441274719)
+('Validation Accuracy : ', 0.2968)
+-----------------------------------------------------------------------
+('Epoch', 60, ' , Total_Loss: ', 5.157748808209112, ', Loss : ', 2.180483387518943)
+('Training Accuracy : ', 0.33984375)
+('Validation Loss : ', 2.308663808538124)
+('Validation Accuracy : ', 0.2968)
+-----------------------------------------------------------------------
+('Epoch', 61, ' , Total_Loss: ', 5.15309256131374, ', Loss : ', 2.175666716713748)
+('Training Accuracy : ', 0.33984375)
+('Validation Loss : ', 2.307324382047731)
+('Validation Accuracy : ', 0.2977)
+-----------------------------------------------------------------------
+('Epoch', 62, ' , Total_Loss: ', 5.148463073988887, ', Loss : ', 6.323759121474616)
+('Training Accuracy : ', 0.33984375)
+('Validation Loss : ', 2.305997063229516)
+('Validation Accuracy : ', 0.2973)
+-----------------------------------------------------------------------
+('Epoch', 63, ' , Total_Loss: ', 5.143870584660087, ', Loss : ', 6.323759121474616)
+('Training Accuracy : ', 0.33984375)
+('Validation Loss : ', 2.3046965420615884)
+('Validation Accuracy : ', 0.2981)
+-----------------------------------------------------------------------
+('Epoch', 64, ' , Total_Loss: ', 5.139310323474898, ', Loss : ', 3.4079819846525767)
+('Training Accuracy : ', 0.33984375)
+('Validation Loss : ', 2.303414821672795)
+('Validation Accuracy : ', 0.2995)
+-----------------------------------------------------------------------
+('Epoch', 65, ' , Total_Loss: ', 5.134790742796953, ', Loss : ', 2.9247444661353437)
+('Training Accuracy : ', 0.34375)
+('Validation Loss : ', 2.302167839354386)
+('Validation Accuracy : ', 0.2999)
+-----------------------------------------------------------------------
+('Epoch', 66, ' , Total_Loss: ', 5.130301946411092, ', Loss : ', 5.917715335128665)
+('Training Accuracy : ', 0.34765625)
+('Validation Loss : ', 2.3009536584991666)
+('Validation Accuracy : ', 0.3004)
+-----------------------------------------------------------------------
+('Epoch', 67, ' , Total_Loss: ', 5.125851964329968, ', Loss : ', 5.917715335128665)
+('Training Accuracy : ', 0.34765625)
+('Validation Loss : ', 2.2997855548284982)
+('Validation Accuracy : ', 0.3009)
+-----------------------------------------------------------------------
+('Epoch', 68, ' , Total_Loss: ', 5.121432744257017, ', Loss : ', 5.917715335128665)
+('Training Accuracy : ', 0.34765625)
+('Validation Loss : ', 2.2986528182068726)
+('Validation Accuracy : ', 0.3019)
+-----------------------------------------------------------------------
+('Epoch', 69, ' , Total_Loss: ', 5.117039380625911, ', Loss : ', 5.917715335128665)
+('Training Accuracy : ', 0.3515625)
+('Validation Loss : ', 2.2975618873450654)
+('Validation Accuracy : ', 0.3019)
+-----------------------------------------------------------------------
+('Epoch', 70, ' , Total_Loss: ', 5.112665619177578, ', Loss : ', 3.4239519049539897)
+('Training Accuracy : ', 0.3515625)
+('Validation Loss : ', 2.296462620801469)
+('Validation Accuracy : ', 0.3023)
+-----------------------------------------------------------------------
+('Epoch', 71, ' , Total_Loss: ', 5.10833187953286, ', Loss : ', 5.917715335128665)
+('Training Accuracy : ', 0.3515625)
+('Validation Loss : ', 2.2953842684972052)
+('Validation Accuracy : ', 0.303)
+-----------------------------------------------------------------------
+('Epoch', 72, ' , Total_Loss: ', 5.104019941613956, ', Loss : ', 5.795478564726775)
+('Training Accuracy : ', 0.3515625)
+('Validation Loss : ', 2.294285572859825)
+('Validation Accuracy : ', 0.3034)
+-----------------------------------------------------------------------
+('Epoch', 73, ' , Total_Loss: ', 5.099741231758969, ', Loss : ', 6.323759121474616)
+('Training Accuracy : ', 0.35546875)
+('Validation Loss : ', 2.2932338291922396)
+('Validation Accuracy : ', 0.304)
+-----------------------------------------------------------------------
+('Epoch', 74, ' , Total_Loss: ', 5.0954774696415805, ', Loss : ', 6.323759121474615)
+('Training Accuracy : ', 0.35546875)
+('Validation Loss : ', 2.2922157454541705)
+('Validation Accuracy : ', 0.3043)
+-----------------------------------------------------------------------
+('Epoch', 75, ' , Total_Loss: ', 5.091246215764191, ', Loss : ', 3.4079819846525767)
+('Training Accuracy : ', 0.35546875)
+('Validation Loss : ', 2.2911979742724187)
+('Validation Accuracy : ', 0.3047)
+-----------------------------------------------------------------------
+('Epoch', 76, ' , Total_Loss: ', 5.087046753599987, ', Loss : ', 2.9247444661353437)
+('Training Accuracy : ', 0.35546875)
+('Validation Loss : ', 2.290162679904471)
+('Validation Accuracy : ', 0.3047)
+-----------------------------------------------------------------------
+('Epoch', 77, ' , Total_Loss: ', 5.082869954985195, ', Loss : ', 2.7408144259225344)
+('Training Accuracy : ', 0.35546875)
+('Validation Loss : ', 2.2891687048256326)
+('Validation Accuracy : ', 0.3058)
+-----------------------------------------------------------------------
+('Epoch', 78, ' , Total_Loss: ', 5.078712980738219, ', Loss : ', 2.647950634278975)
+('Training Accuracy : ', 0.35546875)
+('Validation Loss : ', 2.2882041853747053)
+('Validation Accuracy : ', 0.3062)
+-----------------------------------------------------------------------
+('Epoch', 79, ' , Total_Loss: ', 5.074580713596254, ', Loss : ', 2.587563221440633)
+('Training Accuracy : ', 0.35546875)
+('Validation Loss : ', 2.2872461237376367)
+('Validation Accuracy : ', 0.3067)
+-----------------------------------------------------------------------
+('Epoch', 80, ' , Total_Loss: ', 5.07046025276378, ', Loss : ', 2.5434344697598834)
+('Training Accuracy : ', 0.35546875)
+('Validation Loss : ', 2.2862853464825186)
+('Validation Accuracy : ', 0.3066)
+-----------------------------------------------------------------------
+('Epoch', 81, ' , Total_Loss: ', 5.066363325809532, ', Loss : ', 2.5091675883606523)
+('Training Accuracy : ', 0.35546875)
+('Validation Loss : ', 2.2853588208058393)
+('Validation Accuracy : ', 0.3067)
+-----------------------------------------------------------------------
+('Epoch', 82, ' , Total_Loss: ', 5.0622836171616585, ', Loss : ', 2.481369754052075)
+('Training Accuracy : ', 0.35546875)
+('Validation Loss : ', 2.2844316832660856)
+('Validation Accuracy : ', 0.3075)
+-----------------------------------------------------------------------
+('Epoch', 83, ' , Total_Loss: ', 5.058227416149993, ', Loss : ', 2.458084685616954)
+('Training Accuracy : ', 0.35546875)
+('Validation Loss : ', 2.2835176361747873)
+('Validation Accuracy : ', 0.3079)
+-----------------------------------------------------------------------
+('Epoch', 84, ' , Total_Loss: ', 5.054188659318858, ', Loss : ', 2.4379845110359963)
+('Training Accuracy : ', 0.3671875)
+('Validation Loss : ', 2.2826355184245988)
+('Validation Accuracy : ', 0.3082)
+-----------------------------------------------------------------------
+('Epoch', 85, ' , Total_Loss: ', 5.050172209559949, ', Loss : ', 2.4202672726745402)
+('Training Accuracy : ', 0.37890625)
+('Validation Loss : ', 2.2817495905534337)
+('Validation Accuracy : ', 0.3081)
+-----------------------------------------------------------------------
+('Epoch', 86, ' , Total_Loss: ', 5.046174494143429, ', Loss : ', 2.404363347981104)
+('Training Accuracy : ', 0.390625)
+('Validation Loss : ', 2.28086542200154)
+('Validation Accuracy : ', 0.3085)
+-----------------------------------------------------------------------
+('Epoch', 87, ' , Total_Loss: ', 5.042196763626122, ', Loss : ', 2.389913793101362)
+('Training Accuracy : ', 0.390625)
+('Validation Loss : ', 2.2799886703585064)
+('Validation Accuracy : ', 0.3087)
+-----------------------------------------------------------------------
+('Epoch', 88, ' , Total_Loss: ', 5.038239744731026, ', Loss : ', 2.3766236340486477)
+('Training Accuracy : ', 0.390625)
+('Validation Loss : ', 2.2791467294527314)
+('Validation Accuracy : ', 0.3092)
+-----------------------------------------------------------------------
+('Epoch', 89, ' , Total_Loss: ', 5.034297042386631, ', Loss : ', 2.364338600981059)
+('Training Accuracy : ', 0.39453125)
+('Validation Loss : ', 2.2783025252259628)
+('Validation Accuracy : ', 0.3095)
+-----------------------------------------------------------------------
+('Epoch', 90, ' , Total_Loss: ', 5.030369836126765, ', Loss : ', 2.352890963453339)
+('Training Accuracy : ', 0.39453125)
+('Validation Loss : ', 2.2774739341246004)
+('Validation Accuracy : ', 0.3098)
+-----------------------------------------------------------------------
+('Epoch', 91, ' , Total_Loss: ', 5.026449349703137, ', Loss : ', 2.342103384847433)
+('Training Accuracy : ', 0.3984375)
+('Validation Loss : ', 2.2766677521074112)
+('Validation Accuracy : ', 0.3102)
+-----------------------------------------------------------------------
+('Epoch', 92, ' , Total_Loss: ', 5.022543400407149, ', Loss : ', 2.3319578633128946)
+('Training Accuracy : ', 0.3984375)
+('Validation Loss : ', 2.275854311224379)
+('Validation Accuracy : ', 0.3105)
+-----------------------------------------------------------------------
+('Epoch', 93, ' , Total_Loss: ', 5.018656311342038, ', Loss : ', 2.322367872176217)
+('Training Accuracy : ', 0.3984375)
+('Validation Loss : ', 2.2750631996562807)
+('Validation Accuracy : ', 0.3105)
+-----------------------------------------------------------------------
+('Epoch', 94, ' , Total_Loss: ', 5.014781738036441, ', Loss : ', 2.313262209005794)
+('Training Accuracy : ', 0.3984375)
+('Validation Loss : ', 2.2743192293963337)
+('Validation Accuracy : ', 0.3108)
+-----------------------------------------------------------------------
+('Epoch', 95, ' , Total_Loss: ', 5.010922076691232, ', Loss : ', 2.3046069362657278)
+('Training Accuracy : ', 0.3984375)
+('Validation Loss : ', 2.273572887383778)
+('Validation Accuracy : ', 0.3103)
+-----------------------------------------------------------------------
+('Epoch', 96, ' , Total_Loss: ', 5.007072154945229, ', Loss : ', 2.2963240473476625)
+('Training Accuracy : ', 0.3984375)
+('Validation Loss : ', 2.272815136426485)
+('Validation Accuracy : ', 0.3101)
+-----------------------------------------------------------------------
+('Epoch', 97, ' , Total_Loss: ', 5.003239643831294, ', Loss : ', 2.2883714663174684)
+('Training Accuracy : ', 0.3984375)
+('Validation Loss : ', 2.2720741561960094)
+('Validation Accuracy : ', 0.31)
+-----------------------------------------------------------------------
+('Epoch', 98, ' , Total_Loss: ', 4.999429863262338, ', Loss : ', 2.2807279091408543)
+('Training Accuracy : ', 0.3984375)
+('Validation Loss : ', 2.271353176939641)
+('Validation Accuracy : ', 0.3101)
+-----------------------------------------------------------------------
+('Epoch', 99, ' , Total_Loss: ', 4.995626181041219, ', Loss : ', 2.2733775402267646)
+('Training Accuracy : ', 0.3984375)
+('Validation Loss : ', 2.270648043434268)
+('Validation Accuracy : ', 0.3104)
+-----------------------------------------------------------------------
+('Epoch', 100, ' , Total_Loss: ', 4.991846076688063, ', Loss : ', 2.266305548196568)
+('Training Accuracy : ', 0.3984375)
+('Validation Loss : ', 2.2699480370613383)
+('Validation Accuracy : ', 0.311)
+-----------------------------------------------------------------------
+('Epoch', 101, ' , Total_Loss: ', 4.988083449619802, ', Loss : ', 2.259483765601243)
+('Training Accuracy : ', 0.3984375)
+('Validation Loss : ', 2.2692535181448563)
+('Validation Accuracy : ', 0.3115)
+-----------------------------------------------------------------------
+('Epoch', 102, ' , Total_Loss: ', 4.9843347456144365, ', Loss : ', 2.2528659144205627)
+('Training Accuracy : ', 0.40234375)
+('Validation Loss : ', 2.268555415279088)
+('Validation Accuracy : ', 0.3118)
+-----------------------------------------------------------------------
+('Epoch', 103, ' , Total_Loss: ', 4.9805968057993555, ', Loss : ', 2.246442910085052)
+('Training Accuracy : ', 0.40234375)
+('Validation Loss : ', 2.2678776292333698)
+('Validation Accuracy : ', 0.3119)
+-----------------------------------------------------------------------
+('Epoch', 104, ' , Total_Loss: ', 4.976872327680028, ', Loss : ', 2.2401997947231176)
+('Training Accuracy : ', 0.40234375)
+('Validation Loss : ', 2.267207942638238)
+('Validation Accuracy : ', 0.3125)
+-----------------------------------------------------------------------
+('Epoch', 105, ' , Total_Loss: ', 4.973158137351419, ', Loss : ', 2.2341197691414916)
+('Training Accuracy : ', 0.40234375)
+('Validation Loss : ', 2.2665411601679715)
+('Validation Accuracy : ', 0.3128)
+-----------------------------------------------------------------------
+('Epoch', 106, ' , Total_Loss: ', 4.969446380561137, ', Loss : ', 2.228199396259881)
+('Training Accuracy : ', 0.40625)
+('Validation Loss : ', 2.2658819011959137)
+('Validation Accuracy : ', 0.313)
+-----------------------------------------------------------------------
+('Epoch', 107, ' , Total_Loss: ', 4.9657459819268635, ', Loss : ', 2.222418584304095)
+('Training Accuracy : ', 0.40625)
+('Validation Loss : ', 2.265224256637028)
+('Validation Accuracy : ', 0.3134)
+-----------------------------------------------------------------------
+('Epoch', 108, ' , Total_Loss: ', 4.962053157561909, ', Loss : ', 2.2167856281217846)
+('Training Accuracy : ', 0.40625)
+('Validation Loss : ', 2.26455274367592)
+('Validation Accuracy : ', 0.3133)
+-----------------------------------------------------------------------
+('Epoch', 109, ' , Total_Loss: ', 4.958367227342215, ', Loss : ', 2.211280885124267)
+('Training Accuracy : ', 0.40625)
+('Validation Loss : ', 2.2639035306206368)
+('Validation Accuracy : ', 0.314)
+-----------------------------------------------------------------------
+('Epoch', 110, ' , Total_Loss: ', 4.954689169116321, ', Loss : ', 2.205888851291726)
+('Training Accuracy : ', 0.40625)
+('Validation Loss : ', 2.263261526401295)
+('Validation Accuracy : ', 0.3137)
+-----------------------------------------------------------------------
+('Epoch', 111, ' , Total_Loss: ', 4.951020401375089, ', Loss : ', 2.200612432383535)
+('Training Accuracy : ', 0.40625)
+('Validation Loss : ', 2.2626432346815775)
+('Validation Accuracy : ', 0.3144)
+-----------------------------------------------------------------------
+('Epoch', 112, ' , Total_Loss: ', 4.947348962561954, ', Loss : ', 2.1954344377870223)
+('Training Accuracy : ', 0.40625)
+('Validation Loss : ', 2.262014745030813)
+('Validation Accuracy : ', 0.3144)
+-----------------------------------------------------------------------
+('Epoch', 113, ' , Total_Loss: ', 4.943696274562585, ', Loss : ', 2.190363854744501)
+('Training Accuracy : ', 0.40625)
+('Validation Loss : ', 2.261413577904141)
+('Validation Accuracy : ', 0.314)
+-----------------------------------------------------------------------
+('Epoch', 114, ' , Total_Loss: ', 4.9400530375624925, ', Loss : ', 2.185386954266083)
+('Training Accuracy : ', 0.40625)
+('Validation Loss : ', 2.2608058159285065)
+('Validation Accuracy : ', 0.3143)
+-----------------------------------------------------------------------
+('Epoch', 115, ' , Total_Loss: ', 4.936413415614245, ', Loss : ', 2.180483387518943)
+('Training Accuracy : ', 0.41015625)
+('Validation Loss : ', 2.260233317659475)
+('Validation Accuracy : ', 0.3145)
+-----------------------------------------------------------------------
+('Epoch', 116, ' , Total_Loss: ', 4.93278151268384, ', Loss : ', 2.175666716713748)
+('Training Accuracy : ', 0.41015625)
+('Validation Loss : ', 2.2596265169962373)
+('Validation Accuracy : ', 0.3147)
+-----------------------------------------------------------------------
+('Epoch', 117, ' , Total_Loss: ', 4.929167154780091, ', Loss : ', 2.1709359171104583)
+('Training Accuracy : ', 0.41015625)
+('Validation Loss : ', 2.2590443924480694)
+('Validation Accuracy : ', 0.3152)
+-----------------------------------------------------------------------
+('Epoch', 118, ' , Total_Loss: ', 4.925566468106266, ', Loss : ', 2.166278126941718)
+('Training Accuracy : ', 0.41015625)
+('Validation Loss : ', 2.2584448963237853)
+('Validation Accuracy : ', 0.3151)
+-----------------------------------------------------------------------
+('Epoch', 119, ' , Total_Loss: ', 4.921980304274551, ', Loss : ', 2.161691482501085)
+('Training Accuracy : ', 0.41015625)
+('Validation Loss : ', 2.257882489645319)
+('Validation Accuracy : ', 0.3152)
+-----------------------------------------------------------------------
+('Epoch', 120, ' , Total_Loss: ', 4.918406722134901, ', Loss : ', 2.157175766965007)
+('Training Accuracy : ', 0.41015625)
+('Validation Loss : ', 2.257313409513827)
+('Validation Accuracy : ', 0.315)
+-----------------------------------------------------------------------
+('Epoch', 121, ' , Total_Loss: ', 4.914834007933911, ', Loss : ', 2.1527355670536945)
+('Training Accuracy : ', 0.41015625)
+('Validation Loss : ', 2.256774462446175)
+('Validation Accuracy : ', 0.315)
+-----------------------------------------------------------------------
+('Epoch', 122, ' , Total_Loss: ', 4.911272287873152, ', Loss : ', 2.148369668110888)
+('Training Accuracy : ', 0.41015625)
+('Validation Loss : ', 2.2562306717783382)
+('Validation Accuracy : ', 0.3153)
+-----------------------------------------------------------------------
+('Epoch', 123, ' , Total_Loss: ', 4.907717128650852, ', Loss : ', 2.144058148861535)
+('Training Accuracy : ', 0.41015625)
+('Validation Loss : ', 2.2557109054850932)
+('Validation Accuracy : ', 0.3156)
+-----------------------------------------------------------------------
+('Epoch', 124, ' , Total_Loss: ', 4.904170322141163, ', Loss : ', 2.1398003699032175)
+('Training Accuracy : ', 0.4140625)
+('Validation Loss : ', 2.25517658904824)
+('Validation Accuracy : ', 0.316)
+-----------------------------------------------------------------------
+('Epoch', 125, ' , Total_Loss: ', 4.900630344644958, ', Loss : ', 2.1355856872750874)
+('Training Accuracy : ', 0.41796875)
+('Validation Loss : ', 2.2546744026259824)
+('Validation Accuracy : ', 0.3164)
+-----------------------------------------------------------------------
+('Epoch', 126, ' , Total_Loss: ', 4.897097454834347, ', Loss : ', 2.131417608320683)
+('Training Accuracy : ', 0.41796875)
+('Validation Loss : ', 2.254171655637475)
+('Validation Accuracy : ', 0.3163)
+-----------------------------------------------------------------------
+('Epoch', 127, ' , Total_Loss: ', 4.893573627444608, ', Loss : ', 2.127304968341094)
+('Training Accuracy : ', 0.41796875)
+('Validation Loss : ', 2.253684357008712)
+('Validation Accuracy : ', 0.3166)
+-----------------------------------------------------------------------
+('Epoch', 128, ' , Total_Loss: ', 4.890057454799145, ', Loss : ', 2.1232447795941383)
+('Training Accuracy : ', 0.41796875)
+('Validation Loss : ', 2.253214793508136)
+('Validation Accuracy : ', 0.3173)
+-----------------------------------------------------------------------
+('Epoch', 129, ' , Total_Loss: ', 4.886550778625988, ', Loss : ', 2.119241256413377)
+('Training Accuracy : ', 0.42578125)
+('Validation Loss : ', 2.252734739246765)
+('Validation Accuracy : ', 0.3177)
+-----------------------------------------------------------------------
+('Epoch', 130, ' , Total_Loss: ', 4.883054708310239, ', Loss : ', 2.1152847289324033)
+('Training Accuracy : ', 0.42578125)
+('Validation Loss : ', 2.2522524330322713)
+('Validation Accuracy : ', 0.318)
+-----------------------------------------------------------------------
+('Epoch', 131, ' , Total_Loss: ', 4.879566091644723, ', Loss : ', 2.1113697727265466)
+('Training Accuracy : ', 0.42578125)
+('Validation Loss : ', 2.2517932596572)
+('Validation Accuracy : ', 0.3183)
+-----------------------------------------------------------------------
+('Epoch', 132, ' , Total_Loss: ', 4.8760847885246354, ', Loss : ', 2.107485751664168)
+('Training Accuracy : ', 0.42578125)
+('Validation Loss : ', 2.2513129377297676)
+('Validation Accuracy : ', 0.3183)
+-----------------------------------------------------------------------
+('Epoch', 133, ' , Total_Loss: ', 4.872603399788267, ', Loss : ', 2.1036445408869904)
+('Training Accuracy : ', 0.4296875)
+('Validation Loss : ', 2.2508828501019633)
+('Validation Accuracy : ', 0.3186)
+-----------------------------------------------------------------------
+('Epoch', 134, ' , Total_Loss: ', 4.869131354255489, ', Loss : ', 2.0998435971267853)
+('Training Accuracy : ', 0.4296875)
+('Validation Loss : ', 2.250441919612351)
+('Validation Accuracy : ', 0.3189)
+-----------------------------------------------------------------------
+('Epoch', 135, ' , Total_Loss: ', 4.865660202969961, ', Loss : ', 2.0960851793896995)
+('Training Accuracy : ', 0.43359375)
+('Validation Loss : ', 2.2500087381610037)
+('Validation Accuracy : ', 0.319)
+-----------------------------------------------------------------------
+('Epoch', 136, ' , Total_Loss: ', 4.862204243862187, ', Loss : ', 2.092352272097366)
+('Training Accuracy : ', 0.43359375)
+('Validation Loss : ', 2.249589771468767)
+('Validation Accuracy : ', 0.3191)
+-----------------------------------------------------------------------
+('Epoch', 137, ' , Total_Loss: ', 4.858747540412374, ', Loss : ', 2.0886551148198853)
+('Training Accuracy : ', 0.44140625)
+('Validation Loss : ', 2.2491755438225534)
+('Validation Accuracy : ', 0.319)
+-----------------------------------------------------------------------
+('Epoch', 138, ' , Total_Loss: ', 4.855299047558103, ', Loss : ', 2.0849889541466426)
+('Training Accuracy : ', 0.44140625)
+('Validation Loss : ', 2.2487250741947995)
+('Validation Accuracy : ', 0.3189)
+-----------------------------------------------------------------------
+('Epoch', 139, ' , Total_Loss: ', 4.851860213575928, ', Loss : ', 2.08136226046708)
+('Training Accuracy : ', 0.44140625)
+('Validation Loss : ', 2.2483081145396193)
+('Validation Accuracy : ', 0.3189)
+-----------------------------------------------------------------------
+('Epoch', 140, ' , Total_Loss: ', 4.848422837487674, ', Loss : ', 2.0777651545125195)
+('Training Accuracy : ', 0.44140625)
+('Validation Loss : ', 2.2478846537459276)
+('Validation Accuracy : ', 0.3191)
+-----------------------------------------------------------------------
+('Epoch', 141, ' , Total_Loss: ', 4.844990355426797, ', Loss : ', 2.074205671224128)
+('Training Accuracy : ', 0.44140625)
+('Validation Loss : ', 2.247484791811631)
+('Validation Accuracy : ', 0.3192)
+-----------------------------------------------------------------------
+('Epoch', 142, ' , Total_Loss: ', 4.841565830535349, ', Loss : ', 2.0706757642681484)
+('Training Accuracy : ', 0.44140625)
+('Validation Loss : ', 2.247087614159103)
+('Validation Accuracy : ', 0.32)
+-----------------------------------------------------------------------
+('Epoch', 143, ' , Total_Loss: ', 4.83813985984102, ', Loss : ', 2.0671705414176134)
+('Training Accuracy : ', 0.453125)
+('Validation Loss : ', 2.246684981924285)
+('Validation Accuracy : ', 0.3204)
+-----------------------------------------------------------------------
+('Epoch', 144, ' , Total_Loss: ', 4.8347202525108575, ', Loss : ', 2.0636837834445325)
+('Training Accuracy : ', 0.453125)
+('Validation Loss : ', 2.246277258646233)
+('Validation Accuracy : ', 0.3201)
+-----------------------------------------------------------------------
+('Epoch', 145, ' , Total_Loss: ', 4.831307871741779, ', Loss : ', 2.0602359090238482)
+('Training Accuracy : ', 0.453125)
+('Validation Loss : ', 2.2458854723661346)
+('Validation Accuracy : ', 0.3202)
+-----------------------------------------------------------------------
+
+#Validation Set
+
+datadict = unpickle("./Data/cifar-100-python/test")
+
+xtest = datadict[b'data']
+
+ytest = datadict[b'coarse_labels']
+
+valid_examples = xtest.shape[0]
+
+scores_valid, layers_valid = FwdPass(minimum_w,minimum_b,layers,0,xtest,valid_examples)
+
+predicted_class_v = np.argmax(scores_valid, axis=1)
+
+print ('Test accuracy: %.2f' % (np.mean(predicted_class_v == ytest)))
+
+Test accuracy: 0.20
+
+# w = np.random.randn(Dimensions,hidden1)/np.sqrt(Dimensions/2)
+
+# b = np.zeros((hidden1))
+
+# w2 = np.random.randn(hidden1,hidden2)/np.sqrt(hidden1/2)
+
+# b2 = np.zeros((hidden2))
+
+# w3 = np.random.randn(hidden2,classes)/np.sqrt(hidden2/2)
+
+# b3 = np.zeros((classes))
+
+​
+
+    if((np.mean(predicted_class_v == yval)) < minimum_acc):
+
+        minimum_w = w
+
+        minimum_b = b
+
+        minimum_acc = (np.mean(predicted_class_v == yval))
+
+            
+
+    Total_Training_Losses.append(Loss_Per_Epoch_Total[qq])
+
+    Total_Validation_Losses.append((np.mean(valid_loss)))
+
+#ADAM Weight Updates       
+
+beta1 = 0.5
+
+beta2 = 0.5
+
+While True:
+
+    #HiddenLayer1
+
+    Minibatch = xtr[:256]
+
+    Val = net.forwardPass(Minibatch,w)
+
+    Grad = net.backwardPass(Val, w)
+
+    momentum1 = beta1*momentum1 + (1-beta1)*Grad
+
+    Accum1 = beta2*Accum1 + (1-beta2)*(Grad*Grad)
+
+    w += (-learning_rate * momentum1) / (sqrt(Accum1) + 1e-7)
+
+    #HiddenLayer2
+
+    Minibatch = hidden_layer_1[:256]
+
+    Val = net.forwardPass(Minibatch,w2)
+
+    Grad = net.backwardPass(Val, w2)
+
+    momentum2 = beta1*momentum2 + (1-beta1)*Grad
+
+    Accum2 = beta2*Accum2 + (1-beta2)*(Grad*Grad)
+
+    w2 += (-learning_rate * momentum2) / (sqrt(Accum2) + 1e-7)
+
+    #Output
+
+    Minibatch = hidden_layer_2[:256]
+
+    Val = net.forwardPass(Minibatch,w3)
+
+    Grad = net.backwardPass(Val, w3)
+
+    momentum3 = beta1*momentum + (1-beta1)*Grad
+
+    Accum3 = beta2*Accum3 + (1-beta2)*(Grad*Grad)
+
+    w3 += (-learning_rate * momentum3) / (sqrt(Accum3) + 1e-7)
+
+   
+
+​
+
+​
+
